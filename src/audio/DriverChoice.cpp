@@ -15,8 +15,8 @@ constexpr std::array<std::string_view, 7> kPreferredTypes{"ASIO",
                                                           "Windows Audio (Low Latency Mode)",
                                                           "Windows Audio (Exclusive Mode)",
                                                           "DirectSound",
-                                                          "ALSA",
-                                                          "JACK"};
+                                                          "JACK",
+                                                          "ALSA"};
 
 std::size_t rank(const std::string& type)
 {

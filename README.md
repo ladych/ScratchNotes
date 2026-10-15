@@ -37,7 +37,7 @@ ctest --preset debug
 
 **Windows mit ASIO:** Steinberg stellt das ASIO-SDK seit Oktober 2025 unter GPLv3 bereit, das ist mit unserer AGPLv3 vereinbar. CMake lädt die festgelegte Version (2.3.4, mit SHA-256 geprüft) beim Konfigurieren von Steinberg; sie liegt nicht im Repository. Ohne Internet: SDK selbst entpacken und `-DSNOTES_ASIO_SDK_DIR=C:/pfad/zum/asiosdk` angeben (das Verzeichnis mit `common/iasiodrv.h`); `-DSNOTES_ASIO=OFF` baut ohne ASIO. Die CI stellt das fertige Windows-Programm als Artefakt `ScratchNotes-Windows` bereit.
 
-Beim ersten Start wählt das Programm ASIO, falls ein ASIO-Treiber mit Eingängen installiert ist, sonst WASAPI (unter Linux ALSA). Fällt das gewählte Gerät aus (z. B. Interface abgezogen), läuft es über den nächsten Treiber weiter und kehrt zum gewählten Gerät zurück, sobald es wieder da ist; die Statusleiste zeigt das an. **Audio → Audio-Einstellungen...** (Strg+,) wählt Treiber, Gerät, Samplerate, Buffer und die aktiven Ein- und Ausgänge.
+Beim ersten Start wählt das Programm ASIO, falls ein ASIO-Treiber mit Eingängen installiert ist, sonst WASAPI. Unter Linux nimmt es JACK, wenn ein JACK-Server läuft (auch das JACK von PipeWire), sonst ALSA; das ALSA-Gerät „default“ öffnet sich oft erst ab 512 Samples Buffer. Fällt das gewählte Gerät aus (z. B. Interface abgezogen), läuft es über den nächsten Treiber weiter und kehrt zum gewählten Gerät zurück, sobald es wieder da ist; die Statusleiste zeigt das an. **Audio → Audio-Einstellungen...** (Strg+,) wählt Treiber, Gerät, Samplerate, Buffer und die aktiven Ein- und Ausgänge.
 
 CLion liest `CMakePresets.json` direkt; die Presets `coverage`, `asan` und `tsan` bauen nur die Tests.
 

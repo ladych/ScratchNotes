@@ -55,11 +55,11 @@ TEST(DriverChoiceTest, Q09_UnpluggedAlsaDeviceFallsBackToAnotherAlsaDeviceLast)
     EXPECT_EQ(driverTypesByPreference(linux, "ALSA"), (Types{"ALSA"}));
 }
 
-TEST(DriverChoiceTest, FAO02_LinuxKeepsAlsaBeforeJack)
+TEST(DriverChoiceTest, FAO02_LinuxPrefersARunningJackServerToAlsa)
 {
     const std::vector<DriverDevices> linux{{.type = "ALSA", .inputs = {"default"}, .outputs = {"default"}},
                                            {.type = "JACK", .inputs = {"system"}, .outputs = {"system"}}};
-    EXPECT_EQ(driverTypesByPreference(linux), (Types{"ALSA", "JACK"}));
+    EXPECT_EQ(driverTypesByPreference(linux), (Types{"JACK", "ALSA"}));
 }
 
 TEST(DriverChoiceTest, FAO02_JackWithoutRunningServerIsSkipped)
