@@ -1,0 +1,23 @@
+# Files excluded from the 100 % coverage gate (E-02, E-03).
+# Each entry: <path relative to repository root>  # reason
+# Only humble objects belong here: JUCE glue, driver callbacks and main without logic, and files
+# with declarations only, for which gcov records no executable lines.
+# tools/check-coverage.py fails if a file under src/ is neither covered nor listed here.
+
+src/app/Main.cpp                # JUCE application entry point and window, no logic
+src/app/AppComposition.h        # composition root (E-05), wiring only
+src/app/AppComposition.cpp      # composition root (E-05), wiring only
+src/app/MainMenu.h              # JUCE menu bar and shortcuts forwarding to the actions of MainComponent
+src/app/MainMenu.cpp            # JUCE menu bar and shortcuts forwarding to the actions of MainComponent
+src/app/MainComponent.h         # JUCE component layout, content from ui::formatAudioStatus and ui::channelEntries
+src/app/MainComponent.cpp       # JUCE component layout and dialog launch, content from ui::formatAudioStatus and ui::channelEntries
+src/app/ChannelList.h           # JUCE list box of channel names, content from ui::channelEntries
+src/app/ChannelList.cpp         # JUCE list box of channel names, content from ui::channelEntries
+src/app/AudioDeviceSupervisor.h # drives juce::AudioDeviceManager, decisions in audio::DeviceRecovery and audio::driverTypesByPreference
+src/app/AudioDeviceSupervisor.cpp # drives juce::AudioDeviceManager, decisions in audio::DeviceRecovery and audio::driverTypesByPreference
+src/app/AudioCallback.h         # driver callback forwarding to engine::TestToneSource
+src/app/AboutDialog.h           # JUCE labels and links of the info dialog, content from ui::makeAboutInfo
+src/app/AboutDialog.cpp         # JUCE labels and links of the info dialog, content from ui::makeAboutInfo
+src/app/Dialogs.h               # opens JUCE dialog windows, no logic
+src/app/Dialogs.cpp             # opens JUCE dialog windows, no logic
+src/app/Theme.h                 # colours and JUCE look and feel, no logic

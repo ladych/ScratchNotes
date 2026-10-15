@@ -1,0 +1,9 @@
+[submodule "external/JUCE"]
+	path = external/JUCE
+	url = https://github.com/juce-framework/JUCE.git
+[submodule "external/googletest"]
+	path = external/googletest
+	url = https://github.com/google/googletest.git
+[submodule "external/verovio"]
+	path = external/verovio
+	url = https://github.com/rism-digital/verovio.git

@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  LINUX_JUCE_DEPS: >-
+    libasound2-dev libjack-jackd2-dev libfreetype-dev libfontconfig1-dev
+    libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev
+    libxrandr-dev libxrender-dev libgl1-mesa-dev
+
+jobs:
+  format:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check formatting
+        run: find src tests -name '*.h' -o -name '*.cpp' | xargs clang-format --dry-run --Werror
+
+  linux:
+    name: Linux build and tests (GCC)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build $LINUX_JUCE_DEPS
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  windows:
+    name: Windows build and tests (MSVC)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      # CMake downloads the ASIO SDK (GPLv3) from Steinberg and ONNX Runtime (MIT) from Microsoft,
+      # see cmake/ScratchNotesJuce.cmake and cmake/ScratchNotesOnnxRuntime.cmake.
+      - name: Configure
+        run: cmake -S . -B build -A x64
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      # The program for tests on the Windows machines in the rehearsal room (AP10).
+      - name: Upload program
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScratchNotes-Windows
+          path: build/src/ScratchNotes_artefacts/Release/
+
+  coverage:
+    name: Coverage gate (100 %)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build
+          pipx install gcovr
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DSNOTES_BUILD_APP=OFF -DSNOTES_COVERAGE=ON
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Check coverage
+        run: tools/check-coverage.py build
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build/coverage/
+
+  sanitizers:
+    name: Sanitizer (${{ matrix.sanitizer }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address+undefined, thread]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      # ThreadSanitizer cannot map its shadow memory with the runner's default ASLR entropy.
+      - name: Reduce ASLR entropy
+        run: sudo sysctl vm.mmap_rnd_bits=28
+      - name: Configure
+        run: >-
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DSNOTES_BUILD_APP=OFF
+          -DSNOTES_SANITIZERS=${{ matrix.sanitizer == 'thread' && 'thread' || 'address,undefined' }}
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  clang-tidy:
+    name: clang-tidy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build clang-tidy $LINUX_JUCE_DEPS
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+        env:
+          CC: clang
+          CXX: clang++
+      # Generated header of the translations (LanguageData.h, included by src/app/AppComposition.cpp).
+      - name: Generate sources
+        run: cmake --build build --target ScratchNotesLanguages
+      - name: Run clang-tidy
+        run: tools/run-clang-tidy.sh build
