@@ -48,6 +48,12 @@ if(MSVC)
 else()
     target_compile_options(snotes_verovio PRIVATE -w)
 endif()
+# UBSan reports undefined behaviour inside Verovio 6.3.0 on every MusicXML score with tablature (a vrv::TabGrp
+# cast to vrv::Chord in iomusxml.cpp, an uninitialised bool in scoredef.h). That is upstream code, so UBSan is
+# off for Verovio; ASan stays on, and our own code keeps all checks.
+if(SNOTES_SANITIZERS MATCHES "undefined")
+    target_compile_options(snotes_verovio PRIVATE -fno-sanitize=undefined)
+endif()
 # The coverage gate measures our own code only (E-02); instrumenting Verovio would only slow the build.
 if(SNOTES_COVERAGE)
     target_compile_options(snotes_verovio PRIVATE -fno-profile-arcs -fno-test-coverage)
