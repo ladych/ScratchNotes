@@ -176,14 +176,12 @@ std::unique_ptr<juce::Component> AppComposition::createMainComponent()
     return std::make_unique<MainComponent>(
         deviceManager_,
         deviceSupervisor_,
-        testTone_,
         TrackViewContext{.project = project_,
                          .editor = trackEditor_,
                          .recording = recording_,
                          .meter = inputMeter_,
                          .inputNames = [this] { return inputNames(); },
                          .projectFolder = [this] { return document_.currentFolder(); }},
-        [this] { showAudioSettings(); },
         [this] { addVoice(); });
 }
 

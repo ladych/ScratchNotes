@@ -17,6 +17,7 @@ constexpr int kHeaderWidth = 320;
 constexpr int kMeterWidth = 7;
 constexpr int kPadding = 6;
 constexpr int kLineHeight = 26;
+constexpr int kCaptionHeight = 14;
 constexpr int kSmallButton = 30;
 constexpr int kMeterIntervalMs = 33;
 constexpr int kThumbnailResolution = 512;
@@ -155,6 +156,8 @@ public:
                                                                        &profile_,
                                                                        &take_,
                                                                        &deleteTake_,
+                                                                       &diCaption_,
+                                                                       &wetCaption_,
                                                                        &di_,
                                                                        &wet_,
                                                                        &arm_,
@@ -244,7 +247,11 @@ private:
         deleteTake_.setButtonText(juce::String::fromUTF8("−"));
         deleteTake_.setTooltip(i18n::trJuce("Delete take"));
         deleteTake_.onClick = [this] { editor().deleteActiveTake(id_); };
-        di_.setTooltip(i18n::trJuce("DI input"));
+        diCaption_.setText(i18n::trJuce("DI input"), juce::dontSendNotification);
+        wetCaption_.setText(i18n::trJuce("Processed input"), juce::dontSendNotification);
+        for (auto* caption : {&diCaption_, &wetCaption_})
+            caption->setFont(juce::FontOptions{kCaptionHeight - 1.0F});
+        di_.setTooltip(i18n::trJuce("Input of the dry signal straight from the instrument (DI box)"));
         wet_.setTooltip(i18n::trJuce("Input of the processed signal"));
         di_.onChange = [this] { chooseInputs(); };
         wet_.onChange = [this] { chooseInputs(); };
@@ -286,6 +293,10 @@ private:
         deleteTake_.setBounds(line.removeFromRight(kSmallButton));
         take_.setBounds(line.withTrimmedRight(2));
         header.removeFromTop(2);
+        auto caption = header.removeFromTop(kCaptionHeight);
+        diCaption_.setBounds(caption.removeFromLeft(half));
+        caption.removeFromLeft(kPadding);
+        wetCaption_.setBounds(caption);
         line = header.removeFromTop(kLineHeight);
         di_.setBounds(line.removeFromLeft(half));
         line.removeFromLeft(kPadding);
@@ -322,6 +333,8 @@ private:
     juce::ComboBox profile_;
     juce::ComboBox take_;
     juce::TextButton deleteTake_;
+    theme::DimLabel diCaption_;
+    theme::DimLabel wetCaption_;
     juce::ComboBox di_;
     juce::ComboBox wet_;
     juce::TextButton arm_;

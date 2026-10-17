@@ -26,7 +26,6 @@ add_library(snotes_core STATIC
     transcription/OnnxRuntime.cpp
     ui/AboutInfo.cpp
     ui/AudioStatus.cpp
-    ui/ChannelOverview.cpp
     ui/DocumentController.cpp
     ui/LevelMeter.cpp
     ui/RecordingController.cpp
@@ -49,7 +48,6 @@ set(SNOTES_APP_SOURCES
     app/AboutDialog.cpp
     app/AppComposition.cpp
     app/AudioDeviceSupervisor.cpp
-    app/ChannelList.cpp
     app/Dialogs.cpp
     app/JuceDocumentView.cpp
     app/MainComponent.cpp

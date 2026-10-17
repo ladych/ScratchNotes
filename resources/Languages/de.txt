@@ -12,7 +12,6 @@ countries: de at ch li lu be
 "%1 ms" = "%1 ms"
 
 # Statusleiste
-" (off)" = " (aus)"
 " above 10 ms" = " über 10 ms"
 " | XRuns: %1" = " | XRuns: %1"
 "%1 Hz | Buffer %2 (%3) | " = "%1 Hz | Buffer %2 (%3) | "
@@ -28,8 +27,6 @@ countries: de at ch li lu be
 "About Scratch Notes" = "Über Scratch Notes"
 "Audio settings" = "Audio-Einstellungen"
 "Audio settings..." = "Audio-Einstellungen..."
-"Inputs" = "Eingänge"
-"Outputs" = "Ausgänge"
 "Test tone" = "Testton"
 
 # Menüs
@@ -133,6 +130,8 @@ countries: de at ch li lu be
 "no take" = "kein Take"
 "Delete take" = "Take löschen"
 "DI input" = "DI-Eingang"
+"Processed input" = "Eingang bearbeitet"
+"Input of the dry signal straight from the instrument (DI box)" = "Eingang des unbearbeiteten Signals direkt vom Instrument (DI-Box)"
 "Input of the processed signal" = "Eingang des bearbeiteten Signals"
 "Arm for recording" = "Für die Aufnahme scharfschalten"
 "Mute" = "Stumm"

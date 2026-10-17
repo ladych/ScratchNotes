@@ -25,7 +25,6 @@ add_executable(snotes_tests
     transcription/OnnxRuntimeTest.cpp
     ui/AboutInfoTest.cpp
     ui/AudioStatusTest.cpp
-    ui/ChannelOverviewTest.cpp
     ui/DocumentControllerTest.cpp
     ui/LevelMeterTest.cpp
     ui/RecordingControllerTest.cpp
