@@ -7,14 +7,23 @@ add_executable(snotes_tests
     i18n/GermanTestLanguage.cpp
     i18n/LanguageCatalogTest.cpp
     i18n/TranslateTest.cpp
+    io/ProjectRepositoryTest.cpp
+    io/ProjectSerializerTest.cpp
     io/SettingsStoreTest.cpp
     io/StdFileSystemTest.cpp
+    model/InstrumentProfileTest.cpp
+    model/ProjectTest.cpp
+    model/SnapshotBuilderTest.cpp
+    model/TreeChangeListenerTest.cpp
+    model/UuidGeneratorTest.cpp
     notation/ScoreRendererTest.cpp
     transcription/OnnxRuntimeTest.cpp
     ui/AboutInfoTest.cpp
     ui/AudioStatusTest.cpp
     ui/ChannelOverviewTest.cpp
+    ui/DocumentControllerTest.cpp
     ui/ThemeSettingTest.cpp
+    ui/VoiceListTest.cpp
 )
 
 # Q-04: replaces the global operator new to count allocations, which clashes with the

@@ -1,8 +1,10 @@
 #include "app/MainComponent.h"
 
 #include "i18n/Translate.h"
+#include "model/Project.h"
 #include "ui/AudioStatus.h"
 #include "ui/ChannelOverview.h"
+#include "ui/VoiceList.h"
 
 #include <string>
 #include <utility>
@@ -58,9 +60,12 @@ std::vector<ui::ChannelEntry> entries(const juce::StringArray& names, const juce
 MainComponent::MainComponent(juce::AudioDeviceManager& deviceManager,
                              const AudioDeviceSupervisor& deviceSupervisor,
                              engine::TestToneSource& testTone,
-                             std::function<void()> showAudioSettings)
+                             juce::ValueTree project,
+                             std::function<void()> showAudioSettings,
+                             std::function<void()> addVoice)
     : deviceManager_(deviceManager), deviceSupervisor_(deviceSupervisor), testTone_(testTone),
-      inputs_(i18n::trJuce("Inputs")), outputs_(i18n::trJuce("Outputs"))
+      project_(std::move(project)), voices_(i18n::trJuce("Voices")), inputs_(i18n::trJuce("Inputs")),
+      outputs_(i18n::trJuce("Outputs")), projectListener_(project_, [this] { showVoices(); })
 {
     testToneButton_.setButtonText(i18n::trJuce("Test tone"));
     testToneButton_.setClickingTogglesState(true);
@@ -68,13 +73,16 @@ MainComponent::MainComponent(juce::AudioDeviceManager& deviceManager,
     testToneButton_.onClick = [this] { testTone_.setEnabled(testToneButton_.getToggleState()); };
     settingsButton_.setButtonText(i18n::trJuce("Audio settings..."));
     settingsButton_.onClick = std::move(showAudioSettings);
+    addVoiceButton_.setButtonText(i18n::trJuce("Add voice"));
+    addVoiceButton_.onClick = std::move(addVoice);
     for (auto* component : std::initializer_list<juce::Component*>{
-             &testToneButton_, &settingsButton_, &inputs_, &outputs_, &status_})
+             &testToneButton_, &settingsButton_, &addVoiceButton_, &voices_, &inputs_, &outputs_, &status_})
         addAndMakeVisible(component);
 
     setSize(kWidth, kHeight);
     deviceManager_.addChangeListener(this);
     showChannels();
+    showVoices();
     timerCallback();
     startTimer(kStatusIntervalMs);
 }
@@ -101,8 +109,12 @@ void MainComponent::resized()
     testToneButton_.setBounds(bar.removeFromLeft(kButtonWidth).reduced(0, kPadding / 2));
     bar.removeFromLeft(kPadding);
     settingsButton_.setBounds(bar.removeFromLeft(kButtonWidth).reduced(0, kPadding / 2));
+    addVoiceButton_.setBounds(bar.removeFromRight(kButtonWidth).reduced(0, kPadding / 2));
     area.removeFromTop(kPadding);
-    inputs_.setBounds(area.removeFromLeft((area.getWidth() - kPadding) / 2));
+    const int columnWidth = (area.getWidth() - 2 * kPadding) / 3;
+    voices_.setBounds(area.removeFromLeft(columnWidth));
+    area.removeFromLeft(kPadding);
+    inputs_.setBounds(area.removeFromLeft(columnWidth));
     area.removeFromLeft(kPadding);
     outputs_.setBounds(area);
 }
@@ -132,6 +144,14 @@ void MainComponent::showChannels()
     }
     inputs_.show(entries(device->getInputChannelNames(), device->getActiveInputChannels()));
     outputs_.show(entries(device->getOutputChannelNames(), device->getActiveOutputChannels()));
+}
+
+void MainComponent::showVoices()
+{
+    std::vector<ui::ChannelEntry> lines;
+    for (const auto& entry : ui::voiceEntries(model::Project{project_, nullptr}))
+        lines.push_back({entry.name + "  " + entry.details, true});
+    voices_.show(std::move(lines));
 }
 
 } // namespace snotes::app

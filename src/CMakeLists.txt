@@ -5,14 +5,26 @@ add_library(snotes_core STATIC
     engine/TestToneSource.cpp
     i18n/LanguageCatalog.cpp
     i18n/Translate.cpp
+    io/ProjectRepository.cpp
+    io/ProjectSerializer.cpp
     io/SettingsStore.cpp
     io/StdFileSystem.cpp
+    model/InstrumentProfile.cpp
+    model/Project.cpp
+    model/ProjectFactory.cpp
+    model/SnapshotBuilder.cpp
+    model/SnapshotPublisher.cpp
+    model/TreeChangeListener.cpp
+    model/TreeNode.cpp
+    model/UuidGenerator.cpp
     notation/ScoreRenderer.cpp
     transcription/OnnxRuntime.cpp
     ui/AboutInfo.cpp
     ui/AudioStatus.cpp
     ui/ChannelOverview.cpp
+    ui/DocumentController.cpp
     ui/ThemeSetting.cpp
+    ui/VoiceList.cpp
 )
 target_include_directories(snotes_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(snotes_core PUBLIC snotes_juce snotes_onnxruntime PRIVATE snotes_verovio)
@@ -30,6 +42,7 @@ set(SNOTES_APP_SOURCES
     app/AudioDeviceSupervisor.cpp
     app/ChannelList.cpp
     app/Dialogs.cpp
+    app/JuceDocumentView.cpp
     app/MainComponent.cpp
     app/MainMenu.cpp
 )

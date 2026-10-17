@@ -1,0 +1,43 @@
+#pragma once
+
+#include <juce_data_structures/juce_data_structures.h>
+
+/// Type and property names of the project ValueTree (Pflichtenheft chapter 4). They are also the
+/// element and attribute names in projekt.snotes, so renaming one breaks existing project files.
+namespace snotes::model::ids
+{
+
+// Tree types
+inline const juce::Identifier project{"PROJECT"};
+inline const juce::Identifier voices{"VOICES"};
+inline const juce::Identifier voice{"VOICE"};
+inline const juce::Identifier takes{"TAKES"};
+inline const juce::Identifier take{"TAKE"};
+inline const juce::Identifier beatGrid{"BEAT_GRID"};
+inline const juce::Identifier mix{"MIX"};
+
+// Properties
+inline const juce::Identifier formatVersion{"formatVersion"};
+inline const juce::Identifier name{"name"};
+inline const juce::Identifier sampleRate{"sampleRate"};
+inline const juce::Identifier id{"id"};
+inline const juce::Identifier profileId{"profileId"};
+inline const juce::Identifier inputDi{"inputDi"};
+inline const juce::Identifier inputWet{"inputWet"};
+inline const juce::Identifier gain{"gain"};
+inline const juce::Identifier mute{"mute"};
+inline const juce::Identifier solo{"solo"};
+inline const juce::Identifier monitor{"monitor"};
+inline const juce::Identifier activeTakeId{"activeTakeId"};
+inline const juce::Identifier diFile{"diFile"};
+inline const juce::Identifier wetFile{"wetFile"};
+inline const juce::Identifier startSample{"startSample"};
+inline const juce::Identifier latencyOffsetSamples{"latencyOffsetSamples"};
+inline const juce::Identifier recordedAt{"recordedAt"};
+inline const juce::Identifier masterGain{"masterGain"};
+
+/// Runtime-only marker for a take whose audio file was missing when the project was loaded
+/// (F-PJ-03). It is never written to projekt.snotes.
+inline const juce::Identifier audioMissing{"audioMissing"};
+
+} // namespace snotes::model::ids

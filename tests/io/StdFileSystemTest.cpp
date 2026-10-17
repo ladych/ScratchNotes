@@ -86,8 +86,8 @@ TEST_F(StdFileSystemTest, FPJ03_TellsWhetherAFileExists)
 
 TEST_F(StdFileSystemTest, Q10_RenameReplacesTheTargetFile)
 {
-    const auto temp = root / "rock.dpp.tmp";
-    const auto target = root / "rock.dpp";
+    const auto temp = root / "projekt.snotes.tmp";
+    const auto target = root / "projekt.snotes";
     ASSERT_TRUE(fileSystem.writeText(target, "old"));
     ASSERT_TRUE(fileSystem.writeText(temp, "new"));
 
@@ -99,7 +99,25 @@ TEST_F(StdFileSystemTest, Q10_RenameReplacesTheTargetFile)
 
 TEST_F(StdFileSystemTest, Q10_RenamingMissingFileFails)
 {
-    EXPECT_FALSE(fileSystem.rename(root / "missing.tmp", root / "rock.dpp"));
+    EXPECT_FALSE(fileSystem.rename(root / "missing.tmp", root / "projekt.snotes"));
+}
+
+TEST_F(StdFileSystemTest, FPJ02_CopyFileReplacesTheTarget)
+{
+    const auto source = root / "take-di.wav";
+    const auto target = root / "copy.wav";
+    ASSERT_TRUE(fileSystem.writeText(source, "audio"));
+    ASSERT_TRUE(fileSystem.writeText(target, "old"));
+
+    EXPECT_TRUE(fileSystem.copyFile(source, target));
+
+    EXPECT_EQ(fileSystem.readText(target), std::optional<std::string>{"audio"});
+    EXPECT_TRUE(fs::exists(source));
+}
+
+TEST_F(StdFileSystemTest, FPJ02_CopyingMissingFileFails)
+{
+    EXPECT_FALSE(fileSystem.copyFile(root / "missing.wav", root / "copy.wav"));
 }
 
 } // namespace

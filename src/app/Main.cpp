@@ -52,6 +52,8 @@ public:
         mainWindow_ = std::make_unique<MainWindow>(
             getApplicationName(), composition_->createMainComponent(), composition_->mainMenu());
         composition_->setDialogParent(mainWindow_.get());
+        composition_->setTitleSink([window = mainWindow_.get()](const juce::String& title)
+                                   { window->setName(title); });
     }
 
     void shutdown() override
@@ -61,7 +63,14 @@ public:
         juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
     }
 
-    void systemRequestedQuit() override { quit(); }
+    /// Window close button, the menu and the operating system: asks for unsaved changes first.
+    void systemRequestedQuit() override
+    {
+        if (composition_)
+            composition_->requestQuit();
+        else
+            quit();
+    }
 
 private:
     theme::LookAndFeel lookAndFeel_;

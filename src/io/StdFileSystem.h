@@ -14,6 +14,7 @@ public:
     bool createDirectories(const std::filesystem::path& directory) override;
     [[nodiscard]] bool exists(const std::filesystem::path& file) const override;
     bool rename(const std::filesystem::path& from, const std::filesystem::path& to) override;
+    bool copyFile(const std::filesystem::path& from, const std::filesystem::path& to) override;
 };
 
 } // namespace snotes::io

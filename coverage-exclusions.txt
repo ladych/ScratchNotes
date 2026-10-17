@@ -21,3 +21,7 @@ src/app/AboutDialog.cpp         # JUCE labels and links of the info dialog, cont
 src/app/Dialogs.h               # opens JUCE dialog windows, no logic
 src/app/Dialogs.cpp             # opens JUCE dialog windows, no logic
 src/app/Theme.h                 # colours and JUCE look and feel, no logic
+src/app/JuceDocumentView.h      # JUCE message boxes and file choosers for ui::DocumentController
+src/app/JuceDocumentView.cpp    # JUCE message boxes and file choosers for ui::DocumentController
+src/engine/ProjectSnapshot.h    # plain data, declarations only
+src/model/ModelIds.h            # identifier constants, declarations only

@@ -4,7 +4,10 @@
 
 #include "app/Dialogs.h"
 #include "app/MainComponent.h"
+#include "io/Utf8Path.h"
+#include "model/ProjectFactory.h"
 #include "ui/AboutInfo.h"
+#include "ui/VoiceList.h"
 
 #include <filesystem>
 #include <span>
@@ -36,6 +39,15 @@ std::filesystem::path settingsFile(const char* name)
     return {std::u8string{utf8.begin(), utf8.end()}};
 }
 
+/// New projects get their folder here (F-PJ-01).
+std::filesystem::path projectsFolder()
+{
+    return io::pathFromUtf8(juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+                                .getChildFile("Scratch Notes")
+                                .getFullPathName()
+                                .toStdString());
+}
+
 /// The language of the operating system, e.g. "de-DE".
 std::string systemLanguage()
 {
@@ -63,7 +75,7 @@ i18n::LanguageCatalog appliedLanguages(const io::SettingsStore& settings)
 } // namespace
 
 AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<void()> quit)
-    : languageSettings_(fileSystem_, settingsFile("language.txt")),
+    : quit_(std::move(quit)), languageSettings_(fileSystem_, settingsFile("language.txt")),
       languages_(appliedLanguages(languageSettings_)), themeSettings_(fileSystem_, settingsFile("theme.txt")),
       themeSetting_(
           themeSettings_,
@@ -73,11 +85,31 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
               lookAndFeel.setTheme(shown);
               theme::refreshWindows();
           }),
+      project_(model::ProjectFactory::createDefault({})), snapshotPublisher_(project_, snapshots_),
+      projectRepository_(fileSystem_), lastProjectSettings_(fileSystem_, settingsFile("last-project.txt")),
+      document_(
+          project_,
+          undoManager_,
+          projectRepository_,
+          documentView_,
+          {.projectsFolder = projectsFolder(),
+           .timestamp = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%d %H-%M").toStdString(); },
+           .rememberFolder = [this](const std::filesystem::path& folder)
+           { lastProjectSettings_.save(io::utf8FromPath(folder)); }}),
       deviceSettings_(fileSystem_, settingsFile("audio-device.xml")),
       testTone_(kTestToneFrequencyHz, kTestToneGain), audioCallback_(testTone_),
       deviceSupervisor_(deviceManager_, deviceSettings_, audioCallback_, kDefaultChannels),
       mainMenu_(
-          std::move(quit),
+          [this] { requestQuit(); },
+          {.newProject = [this] { document_.newProject(); },
+           .open = [this] { document_.open(); },
+           .save = [this] { document_.save(); },
+           .saveAs = [this] { document_.saveAs(); }},
+          {.undo = [this] { document_.undo(); },
+           .redo = [this] { document_.redo(); },
+           .canUndo = [this] { return document_.canUndo(); },
+           .canRedo = [this] { return document_.canRedo(); },
+           .addVoice = [this] { addVoice(); }},
           {.showSettings = [this] { showAudioSettings(); },
            .toggleTestTone = [this] { testTone_.setEnabled(!testTone_.isEnabled()); },
            .testToneOn = [this] { return testTone_.isEnabled(); }},
@@ -94,6 +126,8 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .themes = [this] { return themeSetting_.choices(); },
            .chooseTheme = [this](const std::string& setting) { themeSetting_.choose(setting); }})
 {
+    const auto lastProject = lastProjectSettings_.load();
+    document_.start(lastProject ? std::optional{io::pathFromUtf8(*lastProject)} : std::nullopt);
     themeSetting_.apply();
     juce::Desktop::getInstance().addDarkModeSettingListener(this);
     deviceSupervisor_.open();
@@ -112,7 +146,17 @@ AppComposition::~AppComposition()
 std::unique_ptr<juce::Component> AppComposition::createMainComponent()
 {
     return std::make_unique<MainComponent>(
-        deviceManager_, deviceSupervisor_, testTone_, [this] { showAudioSettings(); });
+        deviceManager_,
+        deviceSupervisor_,
+        testTone_,
+        project_,
+        [this] { showAudioSettings(); },
+        [this] { addVoice(); });
+}
+
+void AppComposition::requestQuit()
+{
+    document_.requestClose(quit_);
 }
 
 void AppComposition::changeListenerCallback(juce::ChangeBroadcaster* /*source*/)
@@ -130,6 +174,14 @@ void AppComposition::chooseLanguage(const std::string& setting)
         juce::MessageBoxIconType::InfoIcon,
         juce::String::fromUTF8(languages_.translate(code, "Language").c_str()),
         juce::String::fromUTF8(languages_.restartNotice(setting, systemLanguage()).c_str()));
+}
+
+void AppComposition::addVoice()
+{
+    auto* device = deviceManager_.getCurrentAudioDevice();
+    const int inputs = device != nullptr ? device->getInputChannelNames().size() : 0;
+    model::Project project{project_, &undoManager_};
+    static_cast<void>(ui::addVoice(project, idGenerator_, inputs));
 }
 
 void AppComposition::showAudioSettings()
