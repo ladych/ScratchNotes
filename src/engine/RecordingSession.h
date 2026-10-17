@@ -27,18 +27,24 @@ public:
     [[nodiscard]] int input(std::size_t channel) const noexcept { return inputs_[channel]; }
     [[nodiscard]] AudioRingBuffer& ring(std::size_t channel) noexcept { return *channels_[channel]; }
 
-    /// Audio thread: appends one block. An input the device does not have records silence. Samples that do
-    /// not fit because the writer thread fell behind are counted as dropped.
-    void record(const float* const* inputs, int numInputs, int numSamples) noexcept;
+    /// Audio thread: appends one block whose first sample is at song position `position`. An input the device
+    /// does not have records silence. Samples that do not fit because the writer thread fell behind are
+    /// counted as dropped.
+    void record(const float* const* inputs, int numInputs, int numSamples, std::int64_t position) noexcept;
 
     [[nodiscard]] std::int64_t recordedSamples() const noexcept { return recorded_.load(); }
     [[nodiscard]] std::int64_t droppedSamples() const noexcept { return dropped_.load(); }
+    /// Song position of the first recorded sample (F-WI-04), kNotStarted before the first block.
+    [[nodiscard]] std::int64_t startSample() const noexcept { return start_.load(); }
+
+    static constexpr std::int64_t kNotStarted = -1;
 
 private:
     std::vector<int> inputs_;
     std::vector<std::unique_ptr<AudioRingBuffer>> channels_;
     std::atomic<std::int64_t> recorded_{0};
     std::atomic<std::int64_t> dropped_{0};
+    std::atomic<std::int64_t> start_{kNotStarted};
 };
 
 } // namespace snotes::engine

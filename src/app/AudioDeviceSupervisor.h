@@ -62,4 +62,8 @@ private:
     audio::DeviceRecovery recovery_;
 };
 
+/// The open device as the status line and the latency compensation see it (Q-01, Q-02).
+[[nodiscard]] ui::AudioDeviceInfo describeDevice(juce::AudioDeviceManager& deviceManager,
+                                                 const AudioDeviceSupervisor& supervisor);
+
 } // namespace snotes::app

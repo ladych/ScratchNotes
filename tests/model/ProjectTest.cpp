@@ -63,7 +63,7 @@ TEST_F(ProjectTest, FAU01_AddedVoiceKeepsItsSettings)
     EXPECT_DOUBLE_EQ(voice.gain(), 1.0);
     EXPECT_FALSE(voice.isMuted());
     EXPECT_FALSE(voice.isSolo());
-    EXPECT_FALSE(voice.isMonitored());
+    EXPECT_EQ(voice.monitor(), engine::MonitorSource::off);
     EXPECT_EQ(voice.numTakes(), 0);
     EXPECT_FALSE(voice.activeTake().has_value());
 }
@@ -79,7 +79,7 @@ TEST_F(ProjectTest, FAU01_ChangesVoiceSettings)
     voice.setGain(0.5);
     voice.setMuted(true);
     voice.setSolo(true);
-    voice.setMonitored(true);
+    voice.setMonitor(engine::MonitorSource::di);
 
     EXPECT_EQ(voice.name(), "Bass");
     EXPECT_EQ(voice.profileId(), "bass4-e");
@@ -88,14 +88,25 @@ TEST_F(ProjectTest, FAU01_ChangesVoiceSettings)
     EXPECT_DOUBLE_EQ(voice.gain(), 0.5);
     EXPECT_TRUE(voice.isMuted());
     EXPECT_TRUE(voice.isSolo());
-    EXPECT_TRUE(voice.isMonitored());
+    EXPECT_EQ(voice.monitor(), engine::MonitorSource::di);
 
     voice.setMuted(false);
     voice.setSolo(false);
-    voice.setMonitored(false);
+    voice.setMonitor(engine::MonitorSource::processed);
     EXPECT_FALSE(voice.isMuted());
     EXPECT_FALSE(voice.isSolo());
-    EXPECT_FALSE(voice.isMonitored());
+    EXPECT_EQ(voice.monitor(), engine::MonitorSource::processed);
+    voice.setMonitor(engine::MonitorSource::off);
+    EXPECT_EQ(voice.monitor(), engine::MonitorSource::off);
+}
+
+TEST_F(ProjectTest, FWI06_UnknownMonitorValuesMeanOff)
+{
+    auto voice = addGuitar();
+
+    juce::ValueTree{voice.tree()}.setProperty(ids::monitor, 7, nullptr);
+
+    EXPECT_EQ(voice.monitor(), engine::MonitorSource::off);
 }
 
 TEST_F(ProjectTest, FWI03_GainIsClampedToPlusTwelveDecibels)
@@ -109,6 +120,25 @@ TEST_F(ProjectTest, FWI03_GainIsClampedToPlusTwelveDecibels)
 
     project.mix().setMasterGain(5.0);
     EXPECT_DOUBLE_EQ(project.mix().masterGain(), 4.0);
+}
+
+TEST_F(ProjectTest, FWI07_ClickIsOffWith120BeatsPerMinuteByDefault)
+{
+    EXPECT_FALSE(project.mix().isClickOn());
+    EXPECT_DOUBLE_EQ(project.mix().clickBpm(), 120.0);
+}
+
+TEST_F(ProjectTest, FWI07_ClickTempoIsClamped)
+{
+    auto mix = project.mix();
+    mix.setClickOn(true);
+    mix.setClickBpm(500.0);
+    EXPECT_TRUE(mix.isClickOn());
+    EXPECT_DOUBLE_EQ(mix.clickBpm(), 300.0);
+    mix.setClickBpm(10.0);
+    EXPECT_DOUBLE_EQ(mix.clickBpm(), 30.0);
+    mix.setClickOn(false);
+    EXPECT_FALSE(mix.isClickOn());
 }
 
 TEST_F(ProjectTest, FAU01_FindsVoicesById)

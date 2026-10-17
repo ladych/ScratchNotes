@@ -2,6 +2,7 @@
 
 #include "engine/ProjectSnapshot.h"
 #include "engine/SnapshotExchange.h"
+#include "model/SnapshotBuilder.h"
 #include "model/TreeChangeListener.h"
 
 #include <juce_data_structures/juce_data_structures.h>
@@ -17,13 +18,14 @@ using ProjectSnapshotExchange = engine::SnapshotExchange<engine::ProjectSnapshot
 class SnapshotPublisher
 {
 public:
-    SnapshotPublisher(juce::ValueTree project, ProjectSnapshotExchange& exchange);
+    SnapshotPublisher(juce::ValueTree project, ProjectSnapshotExchange& exchange, TakeAudioSource audio);
 
     void publish();
 
 private:
     juce::ValueTree project_;
     ProjectSnapshotExchange& exchange_;
+    TakeAudioSource audio_;
     TreeChangeListener listener_;
 };
 

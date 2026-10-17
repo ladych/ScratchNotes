@@ -70,6 +70,7 @@ protected:
     /// The audio thread processes one block of `numSamples` with input n carrying the value n + 1.
     void audioBlock(int numSamples)
     {
+        const auto block = transport.beginBlock();
         std::array<std::vector<float>, 3> inputs;
         std::array<const float*, 3> channels{};
         for (std::size_t input = 0; input < inputs.size(); ++input)
@@ -77,7 +78,9 @@ protected:
             inputs.at(input).assign(static_cast<std::size_t>(numSamples), static_cast<float>(input + 1));
             channels.at(input) = inputs.at(input).data();
         }
-        recorder.real.process(channels.data(), 3, numSamples);
+        if (block.playing)
+            recorder.real.process(channels.data(), 3, numSamples, block.position);
+        transport.endBlock(block, numSamples);
     }
 
     void recordPass(int numSamples)
@@ -106,6 +109,8 @@ protected:
     model::Voice guitar{{}, nullptr};
     model::Voice bass{{}, nullptr};
     FakeRecorder recorder;
+    engine::Transport transport;
+    std::int64_t latency = 0;
     NiceMock<io::MockFileSystem> fileSystem;
     FakeWriterThread writerThread;
     model::FakeIdGenerator idGenerator;
@@ -113,12 +118,14 @@ protected:
         tree,
         undoManager,
         recorder,
+        transport,
         fileSystem,
         writerThread,
         idGenerator,
         {.projectFolder = [this](const RecordingEnvironment::FolderCallback& onFolder)
          { onFolder(projectFolder); },
          .deviceSampleRate = [this] { return sampleRate; },
+         .latencySamples = [this] { return latency; },
          .now = [] { return std::string{"2026-10-17T09:40:00"}; },
          .showMessage = [this](const std::string& /*title*/, const std::string& message)
          { messages.push_back(message); }}};
@@ -194,6 +201,43 @@ TEST_F(RecordingControllerTest, FAU02_RecordsDiAndProcessedSignalIntoTheirFiles)
                         ->floatAt(io::WavWriter::kHeaderSize),
                     2.0F);
     EXPECT_DOUBLE_EQ(controller.recordedSeconds(), 0.0);
+}
+
+TEST_F(RecordingControllerTest, FWI04_RecordingRunsWithTheTransport)
+{
+    controller.setArmed("g", true);
+
+    controller.start();
+    EXPECT_TRUE(transport.isPlaying());
+    controller.stop();
+
+    EXPECT_FALSE(transport.isPlaying());
+}
+
+TEST_F(RecordingControllerTest, FWI05_TakeRemembersItsSongPositionAndTheLatency)
+{
+    controller.setArmed("g", true);
+    transport.locate(4800);
+    latency = 240;
+
+    recordPass(100);
+
+    const auto take = guitar.activeTake();
+    ASSERT_TRUE(take.has_value());
+    EXPECT_EQ(take->startSample(), 4800);
+    EXPECT_EQ(take->latencyOffsetSamples(), 240);
+}
+
+TEST_F(RecordingControllerTest, FWI05_TakeWithoutAudioStartsAtTheSongStart)
+{
+    controller.setArmed("g", true);
+
+    controller.start();
+    controller.stop();
+    controller.poll();
+
+    ASSERT_TRUE(guitar.activeTake().has_value());
+    EXPECT_EQ(guitar.activeTake()->startSample(), 0);
 }
 
 TEST_F(RecordingControllerTest, FAU04_EachPassBecomesTheActiveTake)
@@ -415,12 +459,14 @@ TEST_F(RecordingControllerTest, FAU02_ClosingWhileRecordingKeepsTheAudio)
             tree,
             undoManager,
             recorder,
+            transport,
             fileSystem,
             writerThread,
             idGenerator,
             {.projectFolder = [this](const RecordingEnvironment::FolderCallback& onFolder)
              { onFolder(projectFolder); },
              .deviceSampleRate = [] { return 48000.0; },
+             .latencySamples = [] { return std::int64_t{0}; },
              .now = [] { return std::string{}; },
              .showMessage = [](const std::string&, const std::string&) {}}};
         closing.setArmed("b", true);

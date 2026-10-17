@@ -2,12 +2,39 @@
 
 namespace snotes::model
 {
+namespace
+{
 
-std::unique_ptr<const engine::ProjectSnapshot> SnapshotBuilder::build(const Project& project)
+engine::VoiceSnapshot voiceSnapshot(const Voice& voice, bool anySolo, const TakeAudioSource& audio)
+{
+    engine::VoiceSnapshot entry;
+    entry.inputDi = voice.inputDi();
+    entry.inputWet = voice.inputWet();
+    entry.gain = static_cast<float>(voice.gain());
+    entry.audible = !voice.isMuted() && (!anySolo || voice.isSolo());
+    entry.monitor = voice.monitor();
+    if (const auto take = voice.activeTake())
+    {
+        entry.hasTake = true;
+        entry.takeStartSample = take->startSample();
+        entry.takeLatencyOffsetSamples = take->latencyOffsetSamples();
+        const auto wet = take->wetFile();
+        entry.audio = audio(wet.empty() ? take->diFile() : wet);
+    }
+    return entry;
+}
+
+} // namespace
+
+std::unique_ptr<const engine::ProjectSnapshot> SnapshotBuilder::build(const Project& project,
+                                                                      const TakeAudioSource& audio)
 {
     auto snapshot = std::make_unique<engine::ProjectSnapshot>();
     snapshot->sampleRate = project.sampleRate();
-    snapshot->masterGain = static_cast<float>(project.mix().masterGain());
+    const auto mix = project.mix();
+    snapshot->masterGain = static_cast<float>(mix.masterGain());
+    if (mix.isClickOn())
+        snapshot->clickBpm = mix.clickBpm();
 
     bool anySolo = false;
     for (int index = 0; index < project.numVoices(); ++index)
@@ -15,22 +42,7 @@ std::unique_ptr<const engine::ProjectSnapshot> SnapshotBuilder::build(const Proj
             anySolo = true;
 
     for (int index = 0; index < project.numVoices(); ++index)
-    {
-        const auto voice = project.voice(index);
-        engine::VoiceSnapshot entry;
-        entry.inputDi = voice.inputDi();
-        entry.inputWet = voice.inputWet();
-        entry.gain = static_cast<float>(voice.gain());
-        entry.audible = !voice.isMuted() && (!anySolo || voice.isSolo());
-        entry.monitored = voice.isMonitored();
-        if (const auto take = voice.activeTake())
-        {
-            entry.hasTake = true;
-            entry.takeStartSample = take->startSample();
-            entry.takeLatencyOffsetSamples = take->latencyOffsetSamples();
-        }
-        snapshot->voices.push_back(entry);
-    }
+        snapshot->voices.push_back(voiceSnapshot(project.voice(index), anySolo, audio));
     return snapshot;
 }
 

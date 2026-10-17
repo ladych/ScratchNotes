@@ -3,12 +3,15 @@
 #include "app/AudioCallback.h"
 #include "app/AudioDeviceSupervisor.h"
 #include "app/JuceDocumentView.h"
+#include "app/JuceTakeAudioLoader.h"
 #include "app/MainMenu.h"
 #include "app/Theme.h"
 #include "app/WriterThread.h"
 #include "engine/InputMeter.h"
+#include "engine/LatencyProbe.h"
 #include "engine/Recorder.h"
 #include "engine/TestToneSource.h"
+#include "engine/Transport.h"
 #include "i18n/LanguageCatalog.h"
 #include "io/ProjectRepository.h"
 #include "io/SettingsStore.h"
@@ -16,9 +19,13 @@
 #include "model/SnapshotPublisher.h"
 #include "model/UuidGenerator.h"
 #include "ui/DocumentController.h"
+#include "ui/LatencyCalibration.h"
+#include "ui/LatencyCompensation.h"
 #include "ui/RecordingController.h"
+#include "ui/TakeAudioCache.h"
 #include "ui/ThemeSetting.h"
 #include "ui/TrackList.h"
+#include "ui/TransportControl.h"
 
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -63,6 +70,9 @@ private:
     /// Saves the language of "Hilfe > Sprache"; it shows after a restart.
     void chooseLanguage(const std::string& setting);
     void showAudioSettings();
+    void showLatency();
+    [[nodiscard]] ui::AudioDeviceInfo deviceInfo();
+    [[nodiscard]] double deviceSampleRate();
     void addVoice();
     [[nodiscard]] std::vector<std::string> inputNames();
 
@@ -78,6 +88,9 @@ private:
     juce::UndoManager undoManager_;
     juce::ValueTree project_;
     model::ProjectSnapshotExchange snapshots_;
+    // Playback (AP3): the snapshots carry the takes, read once and shared while they play.
+    JuceTakeAudioLoader takeLoader_;
+    ui::TakeAudioCache takeAudio_;
     model::SnapshotPublisher snapshotPublisher_;
     model::UuidGenerator idGenerator_;
     io::ProjectRepository projectRepository_;
@@ -87,9 +100,15 @@ private:
     // Recording (AP2): the audio thread fills the session's rings, the writer thread writes the files.
     engine::InputMeter inputMeter_;
     engine::Recorder recorder_;
+    engine::Transport transport_;
+    engine::LatencyProbe latencyProbe_;
+    io::SettingsStore latencySettings_;
+    ui::LatencyCompensation latency_;
     WriterThread writerThread_;
     ui::TrackEditor trackEditor_;
     ui::RecordingController recording_;
+    ui::TransportControl transportControl_;
+    ui::LatencyCalibration latencyCalibration_;
     io::SettingsStore deviceSettings_;
     engine::TestToneSource testTone_;
     AudioCallback audioCallback_;

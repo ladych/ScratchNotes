@@ -2,10 +2,16 @@
 add_library(snotes_core STATIC
     audio/DeviceRecovery.cpp
     audio/DriverChoice.cpp
+    engine/AudioEngine.cpp
     engine/AudioRingBuffer.cpp
+    engine/ClickTrack.cpp
     engine/InputMeter.cpp
+    engine/LatencyProbe.cpp
+    engine/PlaybackMixer.cpp
     engine/RecordingSession.cpp
+    engine/TakeAudio.cpp
     engine/TestToneSource.cpp
+    engine/Transport.cpp
     i18n/LanguageCatalog.cpp
     i18n/Translate.cpp
     io/ProjectRepository.cpp
@@ -27,11 +33,15 @@ add_library(snotes_core STATIC
     ui/AboutInfo.cpp
     ui/AudioStatus.cpp
     ui/DocumentController.cpp
+    ui/LatencyCalibration.cpp
+    ui/LatencyCompensation.cpp
     ui/LevelMeter.cpp
     ui/RecordingController.cpp
     ui/RecordingTime.cpp
+    ui/TakeAudioCache.cpp
     ui/ThemeSetting.cpp
     ui/TrackList.cpp
+    ui/TransportControl.cpp
     ui/VoiceList.cpp
 )
 target_include_directories(snotes_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -50,6 +60,8 @@ set(SNOTES_APP_SOURCES
     app/AudioDeviceSupervisor.cpp
     app/Dialogs.cpp
     app/JuceDocumentView.cpp
+    app/JuceTakeAudioLoader.cpp
+    app/LatencyDialog.cpp
     app/MainComponent.cpp
     app/MainMenu.cpp
     app/TrackView.cpp

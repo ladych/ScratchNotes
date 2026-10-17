@@ -42,7 +42,7 @@ TEST(RecordingSessionTest, FAU05_RecordsEveryChannelFromItsInput)
     RecordingSession session{{1, 0}, 8};
     const Inputs block{0.25F, 0.5F};
 
-    session.record(block.channels(), 2, 2);
+    session.record(block.channels(), 2, 2, 0);
 
     ASSERT_EQ(session.numChannels(), 2U);
     EXPECT_EQ(session.input(0), 1);
@@ -52,12 +52,24 @@ TEST(RecordingSessionTest, FAU05_RecordsEveryChannelFromItsInput)
     EXPECT_EQ(session.droppedSamples(), 0);
 }
 
+TEST(RecordingSessionTest, FWI04_RemembersTheSongPositionOfTheFirstBlock)
+{
+    RecordingSession session{{0}, 8};
+    const Inputs block{0.25F, 0.5F};
+    EXPECT_EQ(session.startSample(), RecordingSession::kNotStarted);
+
+    session.record(block.channels(), 2, 2, 4800);
+    session.record(block.channels(), 2, 2, 4802);
+
+    EXPECT_EQ(session.startSample(), 4800);
+}
+
 TEST(RecordingSessionTest, FAU02_MissingInputRecordsSilence)
 {
     RecordingSession session{{5, -1}, 8};
     const Inputs block{0.25F, 0.5F};
 
-    session.record(block.channels(), 2, 2);
+    session.record(block.channels(), 2, 2, 0);
 
     EXPECT_THAT(readAll(session.ring(0)), ElementsAre(0.0F, 0.0F));
     EXPECT_THAT(readAll(session.ring(1)), ElementsAre(0.0F, 0.0F));
@@ -68,7 +80,7 @@ TEST(RecordingSessionTest, FAU02_InactiveDeviceChannelRecordsSilence)
     RecordingSession session{{0}, 8};
     const std::array<const float*, 1> channels{nullptr};
 
-    session.record(channels.data(), 1, 2);
+    session.record(channels.data(), 1, 2, 0);
 
     EXPECT_THAT(readAll(session.ring(0)), ElementsAre(0.0F, 0.0F));
 }
@@ -78,8 +90,8 @@ TEST(RecordingSessionTest, FAU02_CountsSamplesThatDidNotFit)
     RecordingSession session{{0, 1}, 3};
     const Inputs block{0.25F, 0.5F};
 
-    session.record(block.channels(), 2, 2);
-    session.record(block.channels(), 2, 2);
+    session.record(block.channels(), 2, 2, 0);
+    session.record(block.channels(), 2, 2, 0);
 
     EXPECT_EQ(session.recordedSamples(), 4);
     EXPECT_EQ(session.droppedSamples(), 2);
@@ -93,12 +105,12 @@ TEST(RecorderTest, FAU02_RecordsOnlyBetweenStartAndStop)
     const Inputs during{0.2F, 0.0F};
     const Inputs after{0.3F, 0.0F};
 
-    recorder.process(before.channels(), 2, 2);
+    recorder.process(before.channels(), 2, 2, 0);
     recorder.start(session);
     EXPECT_FALSE(recorder.isReleased(session));
-    recorder.process(during.channels(), 2, 2);
+    recorder.process(during.channels(), 2, 2, 0);
     recorder.stop();
-    recorder.process(after.channels(), 2, 2);
+    recorder.process(after.channels(), 2, 2, 0);
 
     EXPECT_TRUE(recorder.isReleased(session));
     EXPECT_THAT(readAll(session.ring(0)), ElementsAre(0.2F, 0.2F));
@@ -142,7 +154,7 @@ TEST(RecorderTest, Q04_SessionStoppedWhileTheBlockStartsIsNotTouched)
         recorder.stop();
         releasedDuringBlock = recorder.isReleased(session);
     };
-    recorder.process(block.channels(), 2, 2);
+    recorder.process(block.channels(), 2, 2, 0);
 
     EXPECT_TRUE(releasedDuringBlock);
     EXPECT_EQ(session.ring(0).readable(), 0U);
@@ -166,7 +178,7 @@ TEST(RecorderTest, Q04_SessionInUseIsNotReleased)
             releasedDuringBlock = recorder.isReleased(session);
         };
     };
-    recorder.process(block.channels(), 2, 2);
+    recorder.process(block.channels(), 2, 2, 0);
 
     EXPECT_FALSE(releasedDuringBlock);
     EXPECT_TRUE(recorder.isReleased(session));

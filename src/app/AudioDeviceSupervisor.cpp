@@ -161,4 +161,24 @@ std::vector<audio::DriverDevices> AudioDeviceSupervisor::drivers()
     return result;
 }
 
+ui::AudioDeviceInfo describeDevice(juce::AudioDeviceManager& deviceManager,
+                                   const AudioDeviceSupervisor& supervisor)
+{
+    ui::AudioDeviceInfo info;
+    if (auto* device = deviceManager.getCurrentAudioDevice())
+    {
+        info.open = true;
+        info.driver = device->getTypeName().toStdString();
+        info.device = device->getName().toStdString();
+        info.sampleRate = device->getCurrentSampleRate();
+        info.bufferSize = device->getCurrentBufferSizeSamples();
+        info.inputLatencySamples = device->getInputLatencyInSamples();
+        info.outputLatencySamples = device->getOutputLatencyInSamples();
+        info.inputChannels = device->getActiveInputChannels().countNumberOfSetBits();
+        info.outputChannels = device->getActiveOutputChannels().countNumberOfSetBits();
+    }
+    supervisor.describe(info);
+    return info;
+}
+
 } // namespace snotes::app

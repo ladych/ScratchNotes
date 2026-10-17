@@ -3,6 +3,8 @@
 #include "i18n/Translate.h"
 #include "model/InstrumentProfile.h"
 
+#include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace snotes::ui
@@ -28,7 +30,7 @@ int profileIndex(const std::string& profileId)
     return -1;
 }
 
-void fillTakes(TrackRow& row, const model::Voice& voice)
+void fillTakes(TrackRow& row, const model::Voice& voice, double sampleRate)
 {
     for (int number = 0; number < voice.numTakes(); ++number)
     {
@@ -44,16 +46,36 @@ void fillTakes(TrackRow& row, const model::Voice& voice)
         const auto active = voice.take(row.activeTake);
         row.diFile = active.diFile();
         row.wetFile = active.wetFile();
+        row.takeStartSeconds =
+            static_cast<double>(active.startSample() - active.latencyOffsetSamples()) / sampleRate;
     }
 }
 
 } // namespace
+
+double visibleSeconds(double contentEndSeconds, double positionSeconds)
+{
+    constexpr double kMinSeconds = 30.0;
+    constexpr double kStepSeconds = 10.0;
+    constexpr double kRoomSeconds = 5.0;
+    const double end = std::max(contentEndSeconds, positionSeconds) + kRoomSeconds;
+    return std::max(kMinSeconds, std::ceil(end / kStepSeconds) * kStepSeconds);
+}
 
 std::vector<std::string> instrumentProfileChoices()
 {
     std::vector<std::string> choices;
     for (const auto& profile : model::instrumentProfiles())
         choices.push_back(i18n::tr(profile.name.c_str()));
+    return choices;
+}
+
+std::vector<std::string> monitorChoices()
+{
+    std::vector<std::string> choices;
+    for (const char* name :
+         {i18n::marked("Monitor off"), i18n::marked("Monitor processed"), i18n::marked("Monitor DI")})
+        choices.push_back(i18n::tr(name));
     return choices;
 }
 
@@ -82,8 +104,9 @@ std::vector<TrackRow> trackRows(const model::Project& project,
         row.armed = isArmed(row.id);
         row.muted = voice.isMuted();
         row.solo = voice.isSolo();
+        row.monitor = voice.monitor();
         row.gain = voice.gain();
-        fillTakes(row, voice);
+        fillTakes(row, voice, project.sampleRate());
         rows.push_back(std::move(row));
     }
     return rows;
@@ -124,6 +147,23 @@ void TrackEditor::setMuted(const std::string& voiceId, bool muted)
 void TrackEditor::setSolo(const std::string& voiceId, bool solo)
 {
     edit(voiceId, [solo](model::Voice& voice) { voice.setSolo(solo); });
+}
+
+void TrackEditor::setMonitor(const std::string& voiceId, engine::MonitorSource source)
+{
+    edit(voiceId, [source](model::Voice& voice) { voice.setMonitor(source); });
+}
+
+void TrackEditor::setClickOn(bool on)
+{
+    project_.undoManager()->beginNewTransaction();
+    project_.mix().setClickOn(on);
+}
+
+void TrackEditor::setClickBpm(double beatsPerMinute)
+{
+    project_.undoManager()->beginNewTransaction();
+    project_.mix().setClickBpm(beatsPerMinute);
 }
 
 void TrackEditor::setGain(const std::string& voiceId, double gain)

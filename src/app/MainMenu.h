@@ -31,11 +31,16 @@ struct EditActions
     std::function<void()> addVoice;
 };
 
-/// Actions of the menu "Aufnahme".
-struct RecordActions
+/// Actions of the menu "Transport" (F-WI-01, F-WI-07).
+struct TransportActions
 {
-    std::function<void()> toggle;
+    std::function<void()> togglePlay;
+    std::function<void()> returnToStart;
+    std::function<void()> toggleRecord;
+    std::function<void()> toggleClick;
+    std::function<bool()> playing;
     std::function<bool()> recording;
+    std::function<bool()> clickOn;
 };
 
 /// Actions of the menu "Audio".
@@ -44,6 +49,7 @@ struct AudioMenuActions
     std::function<void()> showSettings;
     std::function<void()> toggleTestTone;
     std::function<bool()> testToneOn;
+    std::function<void()> showLatency;
 };
 
 /// Actions of the menu "Hilfe", with the submenus "Sprache" and "Farbschema".
@@ -56,7 +62,7 @@ struct HelpActions
     std::function<void(const std::string& setting)> chooseTheme;
 };
 
-/// Humble object (E-03): menus "Datei", "Bearbeiten", "Aufnahme", "Audio" and "Hilfe" with their shortcuts,
+/// Humble object (E-03): menus "Datei", "Bearbeiten", "Transport", "Audio" and "Hilfe" with their shortcuts,
 /// forwarding every command to the actions.
 class MainMenu final : public juce::MenuBarModel, public juce::ApplicationCommandTarget
 {
@@ -64,7 +70,7 @@ public:
     MainMenu(std::function<void()> quit,
              FileActions file,
              EditActions edit,
-             RecordActions record,
+             TransportActions transport,
              AudioMenuActions audio,
              HelpActions help);
     ~MainMenu() override;
@@ -93,7 +99,7 @@ private:
     std::function<void()> quit_;
     FileActions file_;
     EditActions edit_;
-    RecordActions record_;
+    TransportActions transport_;
     AudioMenuActions audio_;
     HelpActions help_;
     juce::ApplicationCommandManager commands_;

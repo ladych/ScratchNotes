@@ -30,7 +30,7 @@ protected:
         std::vector<float> left(static_cast<std::size_t>(numSamples), value);
         std::vector<float> right(static_cast<std::size_t>(numSamples), -value);
         const std::array<const float*, 2> channels{left.data(), right.data()};
-        session.record(channels.data(), 2, numSamples);
+        session.record(channels.data(), 2, numSamples, 0);
     }
 
     std::array<std::shared_ptr<FakeFileContent>, 2> contents{std::make_shared<FakeFileContent>(),
@@ -72,7 +72,7 @@ TEST_F(TakeFileWriterTest, FAU02_ReadsLargeBlocksInChunks)
     TakeFileWriter largeWriter{large, std::move(writers)};
     std::vector<float> samples(10000, 0.25F);
     const std::array<const float*, 1> channels{samples.data()};
-    large.record(channels.data(), 1, 10000);
+    large.record(channels.data(), 1, 10000, 0);
 
     EXPECT_TRUE(largeWriter.finish());
 

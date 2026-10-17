@@ -123,9 +123,18 @@ bool Voice::isSolo() const
     return getInt(ids::solo, 0) != 0;
 }
 
-bool Voice::isMonitored() const
+engine::MonitorSource Voice::monitor() const
 {
-    return getInt(ids::monitor, 0) != 0;
+    // Older projects stored 1 for "monitored", which meant the processed input.
+    switch (getInt(ids::monitor, 0))
+    {
+    case 1:
+        return engine::MonitorSource::processed;
+    case 2:
+        return engine::MonitorSource::di;
+    default:
+        return engine::MonitorSource::off;
+    }
 }
 
 void Voice::setName(const std::string& name)
@@ -163,9 +172,9 @@ void Voice::setSolo(bool solo)
     set(ids::solo, solo ? 1 : 0);
 }
 
-void Voice::setMonitored(bool monitored)
+void Voice::setMonitor(engine::MonitorSource source)
 {
-    set(ids::monitor, monitored ? 1 : 0);
+    set(ids::monitor, static_cast<int>(source));
 }
 
 int Voice::numTakes() const
@@ -239,6 +248,26 @@ double Mix::masterGain() const
 void Mix::setMasterGain(double gain)
 {
     set(ids::masterGain, clampGain(gain));
+}
+
+bool Mix::isClickOn() const
+{
+    return getInt(ids::click, 0) != 0;
+}
+
+double Mix::clickBpm() const
+{
+    return getDouble(ids::clickBpm, kDefaultClickBpm);
+}
+
+void Mix::setClickOn(bool on)
+{
+    set(ids::click, on ? 1 : 0);
+}
+
+void Mix::setClickBpm(double beatsPerMinute)
+{
+    set(ids::clickBpm, std::clamp(beatsPerMinute, kMinClickBpm, kMaxClickBpm));
 }
 
 Project::Project(juce::ValueTree tree, juce::UndoManager* undoManager)
