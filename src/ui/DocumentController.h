@@ -52,6 +52,9 @@ public:
     void open();
     void save(const std::function<void(bool saved)>& onDone = [](bool) {});
     void saveAs(std::function<void(bool saved)> onDone = [](bool) {});
+    /// Reports the project folder; a new project is saved first, so its folder exists (recording writes into
+    /// it). Reports std::nullopt if that save failed.
+    void withFolder(const std::function<void(std::optional<std::filesystem::path>)>& action);
     /// Calls onClose unless the user cancels the question for unsaved changes.
     void requestClose(std::function<void()> onClose);
 

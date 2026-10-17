@@ -1,6 +1,9 @@
 add_executable(snotes_tests
     audio/DeviceRecoveryTest.cpp
     audio/DriverChoiceTest.cpp
+    engine/AudioRingBufferTest.cpp
+    engine/InputMeterTest.cpp
+    engine/RecorderTest.cpp
     engine/SnapshotExchangeTest.cpp
     engine/SpscQueueTest.cpp
     engine/TestToneSourceTest.cpp
@@ -11,6 +14,8 @@ add_executable(snotes_tests
     io/ProjectSerializerTest.cpp
     io/SettingsStoreTest.cpp
     io/StdFileSystemTest.cpp
+    io/TakeFileWriterTest.cpp
+    io/WavWriterTest.cpp
     model/InstrumentProfileTest.cpp
     model/ProjectTest.cpp
     model/SnapshotBuilderTest.cpp
@@ -20,9 +25,11 @@ add_executable(snotes_tests
     transcription/OnnxRuntimeTest.cpp
     ui/AboutInfoTest.cpp
     ui/AudioStatusTest.cpp
-    ui/ChannelOverviewTest.cpp
     ui/DocumentControllerTest.cpp
+    ui/LevelMeterTest.cpp
+    ui/RecordingControllerTest.cpp
     ui/ThemeSettingTest.cpp
+    ui/TrackListTest.cpp
     ui/VoiceListTest.cpp
 )
 

@@ -96,8 +96,34 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .timestamp = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%d %H-%M").toStdString(); },
            .rememberFolder = [this](const std::filesystem::path& folder)
            { lastProjectSettings_.save(io::utf8FromPath(folder)); }}),
+      trackEditor_(model::Project{project_, &undoManager_}),
+      recording_(
+          project_,
+          undoManager_,
+          recorder_,
+          fileSystem_,
+          writerThread_,
+          idGenerator_,
+          {.projectFolder = [this](const ui::RecordingEnvironment::FolderCallback& onFolder)
+           { document_.withFolder(onFolder); },
+           .deviceSampleRate =
+               [this]
+           {
+               auto* device = deviceManager_.getCurrentAudioDevice();
+               return device != nullptr ? device->getCurrentSampleRate() : 0.0;
+           },
+           .now = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%dT%H:%M:%S").toStdString(); },
+           .showMessage =
+               [](const std::string& title, const std::string& message)
+           {
+               juce::AlertWindow::showAsync(
+                   juce::MessageBoxOptions::makeOptionsOk(juce::MessageBoxIconType::WarningIcon,
+                                                          juce::String::fromUTF8(title.c_str()),
+                                                          juce::String::fromUTF8(message.c_str())),
+                   nullptr);
+           }}),
       deviceSettings_(fileSystem_, settingsFile("audio-device.xml")),
-      testTone_(kTestToneFrequencyHz, kTestToneGain), audioCallback_(testTone_),
+      testTone_(kTestToneFrequencyHz, kTestToneGain), audioCallback_(testTone_, inputMeter_, recorder_),
       deviceSupervisor_(deviceManager_, deviceSettings_, audioCallback_, kDefaultChannels),
       mainMenu_(
           [this] { requestQuit(); },
@@ -110,6 +136,8 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .canUndo = [this] { return document_.canUndo(); },
            .canRedo = [this] { return document_.canRedo(); },
            .addVoice = [this] { addVoice(); }},
+          {.toggle = [this] { recording_.toggle(); },
+           .recording = [this] { return recording_.state() != ui::RecordingController::State::idle; }},
           {.showSettings = [this] { showAudioSettings(); },
            .toggleTestTone = [this] { testTone_.setEnabled(!testTone_.isEnabled()); },
            .testToneOn = [this] { return testTone_.isEnabled(); }},
@@ -148,9 +176,12 @@ std::unique_ptr<juce::Component> AppComposition::createMainComponent()
     return std::make_unique<MainComponent>(
         deviceManager_,
         deviceSupervisor_,
-        testTone_,
-        project_,
-        [this] { showAudioSettings(); },
+        TrackViewContext{.project = project_,
+                         .editor = trackEditor_,
+                         .recording = recording_,
+                         .meter = inputMeter_,
+                         .inputNames = [this] { return inputNames(); },
+                         .projectFolder = [this] { return document_.currentFolder(); }},
         [this] { addVoice(); });
 }
 
@@ -178,10 +209,17 @@ void AppComposition::chooseLanguage(const std::string& setting)
 
 void AppComposition::addVoice()
 {
-    auto* device = deviceManager_.getCurrentAudioDevice();
-    const int inputs = device != nullptr ? device->getInputChannelNames().size() : 0;
     model::Project project{project_, &undoManager_};
-    static_cast<void>(ui::addVoice(project, idGenerator_, inputs));
+    static_cast<void>(ui::addVoice(project, idGenerator_, static_cast<int>(inputNames().size())));
+}
+
+std::vector<std::string> AppComposition::inputNames()
+{
+    std::vector<std::string> names;
+    if (auto* device = deviceManager_.getCurrentAudioDevice())
+        for (const auto& name : device->getInputChannelNames())
+            names.push_back(name.toStdString());
+    return names;
 }
 
 void AppComposition::showAudioSettings()

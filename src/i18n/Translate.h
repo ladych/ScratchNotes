@@ -30,14 +30,17 @@ constexpr const char* marked(const char* english) noexcept
 /// Replaces %1 ... %9 in the text in one pass, so arguments that contain "%" stay as they are.
 [[nodiscard]] std::string substitute(std::string_view text, std::span<const std::string_view> arguments);
 
-/// Like tr(), then %1, %2 ... %9 are replaced by the arguments (texts) in their order. Translations may
-/// change the order of the placeholders.
-template <typename... Arguments>
-[[nodiscard]] std::string tr(const char* english, const std::string_view first, const Arguments&... rest)
-{
-    const std::array<std::string_view, 1 + sizeof...(Arguments)> arguments{first, std::string_view{rest}...};
-    return substitute(tr(english), arguments);
-}
+/// Like tr(), then %1 ... %4 are replaced by the arguments (texts) in their order. Translations may change
+/// the order of the placeholders.
+[[nodiscard]] std::string tr(const char* english, std::string_view first);
+[[nodiscard]] std::string tr(const char* english, std::string_view first, std::string_view second);
+[[nodiscard]] std::string
+tr(const char* english, std::string_view first, std::string_view second, std::string_view third);
+[[nodiscard]] std::string tr(const char* english,
+                             std::string_view first,
+                             std::string_view second,
+                             std::string_view third,
+                             std::string_view fourth);
 
 template <typename... Arguments>
 [[nodiscard]] juce::String trJuce(const char* english, const std::string_view first, const Arguments&... rest)

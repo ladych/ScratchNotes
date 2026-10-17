@@ -9,10 +9,8 @@ src/app/AppComposition.h        # composition root (E-05), wiring only
 src/app/AppComposition.cpp      # composition root (E-05), wiring only
 src/app/MainMenu.h              # JUCE menu bar and shortcuts forwarding to the actions of MainComponent
 src/app/MainMenu.cpp            # JUCE menu bar and shortcuts forwarding to the actions of MainComponent
-src/app/MainComponent.h         # JUCE component layout, content from ui::formatAudioStatus and ui::channelEntries
-src/app/MainComponent.cpp       # JUCE component layout and dialog launch, content from ui::formatAudioStatus and ui::channelEntries
-src/app/ChannelList.h           # JUCE list box of channel names, content from ui::channelEntries
-src/app/ChannelList.cpp         # JUCE list box of channel names, content from ui::channelEntries
+src/app/MainComponent.h         # JUCE component layout, content from ui::formatAudioStatus
+src/app/MainComponent.cpp       # JUCE component layout and dialog launch, content from ui::formatAudioStatus
 src/app/AudioDeviceSupervisor.h # drives juce::AudioDeviceManager, decisions in audio::DeviceRecovery and audio::driverTypesByPreference
 src/app/AudioDeviceSupervisor.cpp # drives juce::AudioDeviceManager, decisions in audio::DeviceRecovery and audio::driverTypesByPreference
 src/app/AudioCallback.h         # driver callback forwarding to engine::TestToneSource
@@ -25,3 +23,7 @@ src/app/JuceDocumentView.h      # JUCE message boxes and file choosers for ui::D
 src/app/JuceDocumentView.cpp    # JUCE message boxes and file choosers for ui::DocumentController
 src/engine/ProjectSnapshot.h    # plain data, declarations only
 src/model/ModelIds.h            # identifier constants, declarations only
+src/app/TrackView.h             # JUCE track view: rows, meters, waveforms; content from ui::trackRows, edits via ui::TrackEditor
+src/app/TrackView.cpp           # JUCE track view: rows, meters, waveforms; content from ui::trackRows, edits via ui::TrackEditor
+src/app/WriterThread.h          # juce::Thread pumping io::TakeFileWriter, no logic
+src/app/WriterThread.cpp        # juce::Thread pumping io::TakeFileWriter, no logic

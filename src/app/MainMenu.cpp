@@ -21,6 +21,7 @@ constexpr juce::CommandID fileSaveAs = 0x1005;
 constexpr juce::CommandID editUndo = 0x1101;
 constexpr juce::CommandID editRedo = 0x1102;
 constexpr juce::CommandID editAddVoice = 0x1103;
+constexpr juce::CommandID recordToggle = 0x1201;
 constexpr juce::CommandID audioSettings = 0x2001;
 constexpr juce::CommandID audioTestTone = 0x2002;
 constexpr juce::CommandID helpAbout = 0x9001;
@@ -82,6 +83,12 @@ constexpr std::array kCommands{
                 i18n::marked("Edit"),
                 0,
                 0},
+    CommandSpec{command::recordToggle,
+                i18n::marked("Record"),
+                i18n::marked("Start or stop recording all armed voices"),
+                i18n::marked("Recording"),
+                'r',
+                kCtrl},
     CommandSpec{command::fileQuit,
                 i18n::marked("Quit"),
                 i18n::marked("Quit the program"),
@@ -108,7 +115,7 @@ constexpr std::array kCommands{
                 0},
 };
 
-constexpr int kHelpMenu = 3;
+constexpr int kHelpMenu = 4;
 /// Item IDs of the submenus "Sprache" and "Farbschema", outside the command IDs.
 constexpr int kFirstLanguageItem = 0x9100;
 constexpr int kFirstThemeItem = 0x9200;
@@ -124,6 +131,8 @@ std::vector<juce::CommandID> menuCommands(int menuIndex)
     case 1:
         return {command::editUndo, command::editRedo, command::editAddVoice};
     case 2:
+        return {command::recordToggle};
+    case 3:
         return {command::audioSettings, command::audioTestTone};
     default:
         return {command::helpAbout};
@@ -140,10 +149,14 @@ const CommandSpec* findCommand(juce::CommandID id)
 
 } // namespace
 
-MainMenu::MainMenu(
-    std::function<void()> quit, FileActions file, EditActions edit, AudioMenuActions audio, HelpActions help)
-    : quit_(std::move(quit)), file_(std::move(file)), edit_(std::move(edit)), audio_(std::move(audio)),
-      help_(std::move(help))
+MainMenu::MainMenu(std::function<void()> quit,
+                   FileActions file,
+                   EditActions edit,
+                   RecordActions record,
+                   AudioMenuActions audio,
+                   HelpActions help)
+    : quit_(std::move(quit)), file_(std::move(file)), edit_(std::move(edit)), record_(std::move(record)),
+      audio_(std::move(audio)), help_(std::move(help))
 {
     commands_.registerAllCommandsForTarget(this);
     commands_.setFirstCommandTarget(this);
@@ -158,8 +171,11 @@ MainMenu::~MainMenu()
 juce::StringArray MainMenu::getMenuBarNames()
 {
     juce::StringArray names;
-    for (const auto* name :
-         {i18n::marked("File"), i18n::marked("Edit"), i18n::marked("Audio"), i18n::marked("Help")})
+    for (const auto* name : {i18n::marked("File"),
+                             i18n::marked("Edit"),
+                             i18n::marked("Recording"),
+                             i18n::marked("Audio"),
+                             i18n::marked("Help")})
         names.add(i18n::trJuce(name));
     return names;
 }
@@ -225,6 +241,8 @@ void MainMenu::getCommandInfo(juce::CommandID commandID, juce::ApplicationComman
         result.addDefaultKeypress(spec->key, spec->modifiers);
     if (commandID == command::audioTestTone)
         result.setTicked(audio_.testToneOn());
+    if (commandID == command::recordToggle)
+        result.setTicked(record_.recording());
     if (commandID == command::editUndo)
         result.setActive(edit_.canUndo());
     if (commandID == command::editRedo)
@@ -260,6 +278,8 @@ std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
         return edit_.redo;
     case command::editAddVoice:
         return edit_.addVoice;
+    case command::recordToggle:
+        return record_.toggle;
     case command::audioSettings:
         return audio_.showSettings;
     case command::audioTestTone:

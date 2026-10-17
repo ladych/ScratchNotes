@@ -15,6 +15,7 @@ public:
     [[nodiscard]] bool exists(const std::filesystem::path& file) const override;
     bool rename(const std::filesystem::path& from, const std::filesystem::path& to) override;
     bool copyFile(const std::filesystem::path& from, const std::filesystem::path& to) override;
+    [[nodiscard]] std::unique_ptr<IBinaryFile> createBinaryFile(const std::filesystem::path& file) override;
 };
 
 } // namespace snotes::io

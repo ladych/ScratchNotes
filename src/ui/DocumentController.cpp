@@ -91,6 +91,16 @@ void DocumentController::saveAs(std::function<void(bool saved)> onDone)
         });
 }
 
+void DocumentController::withFolder(const std::function<void(std::optional<std::filesystem::path>)>& action)
+{
+    if (currentFolder_)
+    {
+        action(currentFolder_);
+        return;
+    }
+    save([this, action](bool saved) { action(saved ? currentFolder_ : std::nullopt); });
+}
+
 void DocumentController::requestClose(std::function<void()> onClose)
 {
     ifChangesSaved(std::move(onClose));
