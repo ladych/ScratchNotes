@@ -19,6 +19,7 @@ constexpr int kPadding = 6;
 constexpr int kLineHeight = 26;
 constexpr int kCaptionHeight = 14;
 constexpr int kSmallButton = 30;
+constexpr int kMonitorWidth = 130;
 constexpr int kMeterIntervalMs = 33;
 constexpr int kThumbnailResolution = 512;
 constexpr int kThumbnailCacheSize = 32;
@@ -221,7 +222,7 @@ public:
         arm_.setToggleState(row.armed, juce::dontSendNotification);
         mute_.setToggleState(row.muted, juce::dontSendNotification);
         solo_.setToggleState(row.solo, juce::dontSendNotification);
-        monitor_.setToggleState(row.monitored, juce::dontSendNotification);
+        monitor_.setSelectedItemIndex(static_cast<int>(row.monitor), juce::dontSendNotification);
         if (!gain_.isMouseButtonDown())
             gain_.setValue(row.gain, juce::dontSendNotification);
         diMeter_.setInput(row.diChoice - 1);
@@ -310,10 +311,14 @@ private:
         solo_.setTooltip(i18n::trJuce("Solo"));
         solo_.setClickingTogglesState(true);
         solo_.onClick = [this] { editor().setSolo(id_, solo_.getToggleState()); };
-        monitor_.setButtonText("I");
-        monitor_.setTooltip(i18n::trJuce("Hear the input while playing (software monitoring)"));
-        monitor_.setClickingTogglesState(true);
-        monitor_.onClick = [this] { editor().setMonitored(id_, monitor_.getToggleState()); };
+        fill(monitor_, ui::monitorChoices());
+        monitor_.setTooltip(
+            i18n::trJuce("Hear the processed or the DI input while playing (software monitoring)"));
+        monitor_.onChange = [this]
+        {
+            editor().setMonitor(
+                id_, static_cast<engine::MonitorSource>(std::max(0, monitor_.getSelectedItemIndex())));
+        };
         gain_.setSliderStyle(juce::Slider::LinearHorizontal);
         gain_.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
         gain_.setRange(0.0, 2.0);
@@ -345,11 +350,12 @@ private:
         wet_.setBounds(line);
         header.removeFromTop(kPadding);
         line = header.removeFromTop(kLineHeight);
-        for (auto* button : {&arm_, &mute_, &solo_, &monitor_})
+        for (auto* button : {&arm_, &mute_, &solo_})
         {
             button->setBounds(line.removeFromLeft(kSmallButton));
             line.removeFromLeft(4);
         }
+        monitor_.setBounds(line.removeFromLeft(kMonitorWidth));
         gain_.setBounds(line.withTrimmedLeft(kPadding));
     }
 
@@ -382,7 +388,7 @@ private:
     juce::TextButton arm_;
     juce::TextButton mute_;
     juce::TextButton solo_;
-    juce::TextButton monitor_;
+    juce::ComboBox monitor_;
     juce::Slider gain_;
     InputMeterBar diMeter_;
     InputMeterBar wetMeter_;

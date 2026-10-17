@@ -127,7 +127,10 @@ countries: de at ch li lu be
 "Play a click in the tempo of the top bar" = "Einen Klick im Tempo der oberen Leiste spielen"
 "Play a click in the tempo on the right (Ctrl+K)" = "Einen Klick im Tempo rechts daneben spielen (Strg+K)"
 "Tempo of the click in beats per minute" = "Tempo des Klicks in Schlägen pro Minute"
-"Hear the input while playing (software monitoring)" = "Den Eingang beim Spielen hören (Software-Monitoring)"
+"Hear the processed or the DI input while playing (software monitoring)" = "Beim Spielen den bearbeiteten oder den DI-Eingang hören (Software-Monitoring)"
+"Monitor off" = "Monitor aus"
+"Monitor processed" = "Monitor bearbeitet"
+"Monitor DI" = "Monitor DI"
 
 "Latency compensation" = "Latenzausgleich"
 "Latency compensation..." = "Latenzausgleich..."

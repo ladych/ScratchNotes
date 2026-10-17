@@ -109,21 +109,22 @@ TEST(PlaybackMixerTest, FWI02_VoicesAreMixedAndLongBlocksPlayInChunks)
     EXPECT_THAT(samples, Each(0.75F));
 }
 
-TEST(PlaybackMixerTest, FWI06_MonitorsTheProcessedInputElseTheDiInput)
+TEST(PlaybackMixerTest, FWI06_MonitorsTheChosenInput)
 {
     std::array<float, 4> di{0.1F, 0.1F, 0.1F, 0.1F};
     std::array<float, 4> wet{0.2F, 0.2F, 0.2F, 0.2F};
     const std::array<const float*, 3> inputs{di.data(), wet.data(), nullptr};
     ProjectSnapshot snapshot;
-    VoiceSnapshot both;
-    both.inputDi = 0;
-    both.inputWet = 1;
-    both.monitored = true;
-    VoiceSnapshot diOnly;
-    diOnly.inputDi = 0;
-    diOnly.monitored = true;
-    diOnly.gain = 2.0F;
-    snapshot.voices = {both, diOnly};
+    VoiceSnapshot processed;
+    processed.inputDi = 0;
+    processed.inputWet = 1;
+    processed.monitor = MonitorSource::processed;
+    VoiceSnapshot dry;
+    dry.inputDi = 0;
+    dry.inputWet = 1;
+    dry.monitor = MonitorSource::di;
+    dry.gain = 2.0F;
+    snapshot.voices = {processed, dry};
     Outputs out;
 
     PlaybackMixer::renderMonitoring(snapshot, inputs.data(), 3, out.channels.data(), 3, 4);
@@ -139,13 +140,14 @@ TEST(PlaybackMixerTest, FWI06_UnmonitoredOrUnroutedInputsAreNotHeard)
     VoiceSnapshot notMonitored;
     notMonitored.inputDi = 0;
     VoiceSnapshot noInput;
-    noInput.monitored = true;
+    noInput.inputDi = 0;
+    noInput.monitor = MonitorSource::processed;
     VoiceSnapshot missingInput;
     missingInput.inputDi = 7;
-    missingInput.monitored = true;
+    missingInput.monitor = MonitorSource::di;
     VoiceSnapshot inactiveInput;
     inactiveInput.inputDi = 1;
-    inactiveInput.monitored = true;
+    inactiveInput.monitor = MonitorSource::di;
     snapshot.voices = {notMonitored, noInput, missingInput, inactiveInput};
     Outputs out;
 

@@ -31,3 +31,4 @@ src/app/JuceTakeAudioLoader.h   # reads a take file with JUCE's WAV reader, no l
 src/app/JuceTakeAudioLoader.cpp # reads a take file with JUCE's WAV reader, no logic
 src/app/LatencyDialog.h         # JUCE controls of the latency dialog, logic in ui::LatencyCalibration
 src/app/LatencyDialog.cpp       # JUCE controls of the latency dialog, logic in ui::LatencyCalibration
+src/engine/MonitorSource.h      # only an enum, no executable lines

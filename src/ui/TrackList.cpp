@@ -70,6 +70,15 @@ std::vector<std::string> instrumentProfileChoices()
     return choices;
 }
 
+std::vector<std::string> monitorChoices()
+{
+    std::vector<std::string> choices;
+    for (const char* name :
+         {i18n::marked("Monitor off"), i18n::marked("Monitor processed"), i18n::marked("Monitor DI")})
+        choices.push_back(i18n::tr(name));
+    return choices;
+}
+
 std::vector<std::string> inputChoices(const std::vector<std::string>& inputNames)
 {
     std::vector<std::string> choices;
@@ -95,7 +104,7 @@ std::vector<TrackRow> trackRows(const model::Project& project,
         row.armed = isArmed(row.id);
         row.muted = voice.isMuted();
         row.solo = voice.isSolo();
-        row.monitored = voice.isMonitored();
+        row.monitor = voice.monitor();
         row.gain = voice.gain();
         fillTakes(row, voice, project.sampleRate());
         rows.push_back(std::move(row));
@@ -140,9 +149,9 @@ void TrackEditor::setSolo(const std::string& voiceId, bool solo)
     edit(voiceId, [solo](model::Voice& voice) { voice.setSolo(solo); });
 }
 
-void TrackEditor::setMonitored(const std::string& voiceId, bool monitored)
+void TrackEditor::setMonitor(const std::string& voiceId, engine::MonitorSource source)
 {
-    edit(voiceId, [monitored](model::Voice& voice) { voice.setMonitored(monitored); });
+    edit(voiceId, [source](model::Voice& voice) { voice.setMonitor(source); });
 }
 
 void TrackEditor::setClickOn(bool on)

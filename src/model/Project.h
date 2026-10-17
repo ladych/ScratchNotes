@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/MonitorSource.h"
 #include "model/TreeNode.h"
 
 #include <cstdint>
@@ -71,7 +72,7 @@ public:
     [[nodiscard]] double gain() const;
     [[nodiscard]] bool isMuted() const;
     [[nodiscard]] bool isSolo() const;
-    [[nodiscard]] bool isMonitored() const;
+    [[nodiscard]] engine::MonitorSource monitor() const;
 
     void setName(const std::string& name);
     void setProfileId(const std::string& profileId);
@@ -81,7 +82,7 @@ public:
     void setGain(double gain);
     void setMuted(bool muted);
     void setSolo(bool solo);
-    void setMonitored(bool monitored);
+    void setMonitor(engine::MonitorSource source);
 
     [[nodiscard]] int numTakes() const;
     [[nodiscard]] Take take(int index) const;

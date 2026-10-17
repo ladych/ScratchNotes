@@ -35,9 +35,9 @@ void PlaybackMixer::renderMonitoring(const ProjectSnapshot& snapshot,
 {
     for (const auto& voice : snapshot.voices)
     {
-        if (!voice.monitored)
+        if (voice.monitor == MonitorSource::off)
             continue;
-        const int input = voice.inputWet >= 0 ? voice.inputWet : voice.inputDi;
+        const int input = voice.monitor == MonitorSource::processed ? voice.inputWet : voice.inputDi;
         if (input < 0 || input >= numInputs || inputs[input] == nullptr)
             continue;
         add(inputs[input], voice.gain * snapshot.masterGain, outputs, numOutputs, 0, numSamples);

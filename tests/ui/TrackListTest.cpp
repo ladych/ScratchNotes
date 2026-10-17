@@ -49,6 +49,11 @@ TEST_F(TrackListTest, FAU01_ProfileChoicesAreTranslated)
                             "Bass 5 Saiten, Gis-Standard"));
 }
 
+TEST_F(TrackListTest, FWI06_MonitorChoicesFollowTheMonitorSources)
+{
+    EXPECT_THAT(monitorChoices(), ElementsAre("Monitor aus", "Monitor bearbeitet", "Monitor DI"));
+}
+
 TEST(VisibleSecondsTest, FWI01_ShowsAtLeastHalfAMinute)
 {
     EXPECT_DOUBLE_EQ(visibleSeconds(0.0, 0.0), 30.0);
@@ -77,7 +82,7 @@ TEST_F(TrackListTest, FAU01_RowsShowTheVoiceSettings)
     EXPECT_EQ(all[0].diChoice, 1);
     EXPECT_EQ(all[0].wetChoice, 2);
     EXPECT_FALSE(all[0].armed);
-    EXPECT_FALSE(all[0].monitored);
+    EXPECT_EQ(all[0].monitor, engine::MonitorSource::off);
     EXPECT_EQ(all[1].profile, -1);
     EXPECT_EQ(all[1].wetChoice, 0);
     EXPECT_TRUE(all[1].armed);
@@ -136,12 +141,12 @@ TEST_F(TrackListTest, FAU01_EditsVoiceSettingsAsSeparateUndoSteps)
     editor.chooseInputs("g", 3, 0);
     editor.setMuted("g", true);
     editor.setSolo("g", true);
-    editor.setMonitored("g", true);
+    editor.setMonitor("g", engine::MonitorSource::processed);
     editor.setGain("g", 0.5);
 
     const auto voice = project.voice(0);
-    EXPECT_TRUE(voice.isMonitored());
-    EXPECT_TRUE(rows()[0].monitored);
+    EXPECT_EQ(voice.monitor(), engine::MonitorSource::processed);
+    EXPECT_EQ(rows()[0].monitor, engine::MonitorSource::processed);
     EXPECT_EQ(voice.name(), "Rhythmus");
     EXPECT_EQ(voice.profileId(), "bass5-gs");
     EXPECT_EQ(voice.inputDi(), 2);

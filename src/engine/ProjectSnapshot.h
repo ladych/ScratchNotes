@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/MonitorSource.h"
 #include "engine/TakeAudio.h"
 
 #include <cstdint>
@@ -18,7 +19,7 @@ struct VoiceSnapshot
     float gain = 1.0F;
     /// False if muted, or if another voice is solo and this one is not.
     bool audible = true;
-    bool monitored = false;
+    MonitorSource monitor = MonitorSource::off;
     bool hasTake = false;
     std::int64_t takeStartSample = 0;
     std::int64_t takeLatencyOffsetSamples = 0;

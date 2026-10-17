@@ -112,7 +112,7 @@ TEST(RealtimeAllocationTest, Q04_PlaybackOverdubClickAndProbeDoNotAllocate)
     snapshot->clickBpm = 120.0;
     VoiceSnapshot voice;
     voice.inputDi = 0;
-    voice.monitored = true;
+    voice.monitor = MonitorSource::processed;
     voice.audio = std::make_shared<const TakeAudio>(std::vector<float>(48000, 0.1F));
     snapshot->voices = {voice, voice};
     snapshots.publish(std::move(snapshot));

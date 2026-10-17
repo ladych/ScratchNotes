@@ -23,7 +23,7 @@ public:
                      float* const* outputs,
                      int numOutputs,
                      int numSamples) noexcept;
-    /// Adds the input of every monitored voice: processed if routed, else DI.
+    /// Adds the chosen input (processed or DI) of every monitored voice.
     static void renderMonitoring(const ProjectSnapshot& snapshot,
                                  const float* const* inputs,
                                  int numInputs,

@@ -12,7 +12,7 @@ engine::VoiceSnapshot voiceSnapshot(const Voice& voice, bool anySolo, const Take
     entry.inputWet = voice.inputWet();
     entry.gain = static_cast<float>(voice.gain());
     entry.audible = !voice.isMuted() && (!anySolo || voice.isSolo());
-    entry.monitored = voice.isMonitored();
+    entry.monitor = voice.monitor();
     if (const auto take = voice.activeTake())
     {
         entry.hasTake = true;

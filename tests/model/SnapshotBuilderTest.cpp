@@ -68,7 +68,7 @@ TEST_F(SnapshotBuilderTest, FWI03_CopiesVoiceAndMixSettings)
     auto voice = addVoice("v1", 2);
     voice.setInputWet(3);
     voice.setGain(0.5);
-    voice.setMonitored(true);
+    voice.setMonitor(engine::MonitorSource::di);
     project.mix().setMasterGain(2.0);
 
     const auto snapshot = build();
@@ -80,7 +80,7 @@ TEST_F(SnapshotBuilderTest, FWI03_CopiesVoiceAndMixSettings)
     EXPECT_EQ(entry.inputDi, 2);
     EXPECT_EQ(entry.inputWet, 3);
     EXPECT_FLOAT_EQ(entry.gain, 0.5F);
-    EXPECT_TRUE(entry.monitored);
+    EXPECT_EQ(entry.monitor, engine::MonitorSource::di);
     EXPECT_TRUE(entry.audible);
     EXPECT_FALSE(entry.hasTake);
     EXPECT_EQ(entry.audio, nullptr);

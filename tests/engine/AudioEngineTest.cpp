@@ -178,7 +178,7 @@ TEST(AudioEngineTest, FWI06_MonitoringWorksWhileStopped)
     LoopbackRig rig{kBlock};
     VoiceSnapshot monitored;
     monitored.inputDi = 0;
-    monitored.monitored = true;
+    monitored.monitor = MonitorSource::di;
     rig.publish({monitored});
     rig.tone.setEnabled(true);
     const auto first = rig.run(1);

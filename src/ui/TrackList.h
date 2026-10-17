@@ -24,7 +24,7 @@ struct TrackRow
     bool armed = false;
     bool muted = false;
     bool solo = false;
-    bool monitored = false;
+    engine::MonitorSource monitor = engine::MonitorSource::off;
     double gain = 1.0;
     /// e.g. "Take 2 · 09:40"
     std::vector<std::string> takes;
@@ -43,6 +43,8 @@ struct TrackRow
 
 /// Translated names of the instrument profiles, in the order of model::instrumentProfiles().
 [[nodiscard]] std::vector<std::string> instrumentProfileChoices();
+/// Names of the monitoring choices, in the order of engine::MonitorSource.
+[[nodiscard]] std::vector<std::string> monitorChoices();
 
 /// "— none —" followed by the device inputs, numbered from 1 like the interface labels them, e.g. "1 · Hi-Z
 /// 1".
@@ -63,7 +65,7 @@ public:
     void chooseInputs(const std::string& voiceId, int diChoice, int wetChoice);
     void setMuted(const std::string& voiceId, bool muted);
     void setSolo(const std::string& voiceId, bool solo);
-    void setMonitored(const std::string& voiceId, bool monitored);
+    void setMonitor(const std::string& voiceId, engine::MonitorSource source);
     void setGain(const std::string& voiceId, double gain);
     void chooseTake(const std::string& voiceId, int take);
     /// The audio files stay on disk, so the deletion can be undone.
