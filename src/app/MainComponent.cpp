@@ -16,7 +16,7 @@ constexpr int kWidth = 1200;
 constexpr int kHeight = 720;
 constexpr int kPadding = 8;
 constexpr int kBarHeight = 40;
-constexpr int kButtonWidth = 180;
+constexpr int kAddButtonWidth = 32;
 constexpr int kStatusHeight = 24;
 constexpr int kStatusIntervalMs = 100;
 constexpr int kRecordButtonWidth = 90;
@@ -74,7 +74,7 @@ void MainComponent::setUpTopBar(std::function<void()> addVoice)
     };
     recordTime_.setFont(
         juce::FontOptions{juce::Font::getDefaultMonospacedFontName(), 15.0F, juce::Font::plain});
-    addVoiceButton_.setButtonText(i18n::trJuce("+ Voice"));
+    addVoiceButton_.setButtonText("+");
     addVoiceButton_.setTooltip(i18n::trJuce("Add a voice on the next free input"));
     addVoiceButton_.onClick = std::move(addVoice);
 }
@@ -98,10 +98,11 @@ void MainComponent::resized()
     status_.setBounds(area.removeFromBottom(kStatusHeight).reduced(kPadding, 0));
     area.reduce(kPadding, kPadding);
     auto bar = area.removeFromTop(kBarHeight);
+    addVoiceButton_.setBounds(bar.removeFromLeft(kAddButtonWidth).reduced(0, kPadding / 2));
+    bar.removeFromLeft(kPadding);
     recordButton_.setBounds(bar.removeFromLeft(kRecordButtonWidth).reduced(0, kPadding / 2));
     bar.removeFromLeft(kPadding);
     recordTime_.setBounds(bar.removeFromLeft(kTimeWidth));
-    addVoiceButton_.setBounds(bar.removeFromRight(kButtonWidth).reduced(0, kPadding / 2));
     area.removeFromTop(kPadding);
     tracks_.setBounds(area);
 }

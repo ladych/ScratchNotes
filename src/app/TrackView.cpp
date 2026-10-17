@@ -355,7 +355,8 @@ TrackView::TrackView(TrackViewContext context)
     formats_.registerBasicFormats();
     viewport_.setViewedComponent(&content_, false);
     viewport_.setScrollBarsShown(true, false);
-    empty_.setText(i18n::trJuce("No voices yet. Add one with \"+ Voice\"."), juce::dontSendNotification);
+    empty_.setText(i18n::trJuce("No voices yet. Add one with \"+\" at the top left."),
+                   juce::dontSendNotification);
     empty_.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(viewport_);
     addChildComponent(empty_);

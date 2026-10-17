@@ -12,9 +12,9 @@
 namespace snotes::app
 {
 
-/// Humble object (E-03): the main window. A top bar with Rec, the recording time and "+ Voice"; the track
-/// view (AP2) and the status line with driver, buffer and latency (Q-02). Test tone and audio settings are
-/// in the menu.
+/// Humble object (E-03): the main window. A top bar with "+" (add a voice), Rec and the recording time; the
+/// track view (AP2) and the status line with driver, buffer and latency (Q-02). Test tone and audio settings
+/// are in the menu.
 class MainComponent final : public juce::Component, private juce::ChangeListener, private juce::Timer
 {
 public:
