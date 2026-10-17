@@ -10,6 +10,7 @@ AP0 (Projektgerüst): Das Programm öffnet das Audio-Gerät mit allen Ein- und A
 
 - [Lastenheft](docs/Lastenheft_Scratch_Notes.md)
 - [Pflichtenheft](docs/Pflichtenheft_Scratch_Notes.md) – Arbeitspakete in Kapitel 8, Meilensteine in Kapitel 9
+- [GUI-Entwurf v0.1](docs/GUI-Entwurf_v0.1.png) ([hell](docs/GUI-Entwurf_v0.1_hell.png))
 - [Latenzmessung](docs/Latenzmessung.md) – Vorgehen für Q-01 und Q-02
 - Fortschritt: Issues und Meilensteine in diesem Repository
 

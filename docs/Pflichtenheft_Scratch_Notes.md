@@ -215,7 +215,7 @@ LH = Abschnitt im Lastenheft.
 
 ## 6 Benutzeroberfläche
 
-Ein Hauptfenster mit drei Bereichen: oben Transportleiste, links die **Spurenansicht** (Stimmen mit Eingängen, Rec-Taste, Pegel, Lautstärke, Wellenform der Takes und Beat-Raster darüber), rechts bzw. umschaltbar die **Notenansicht** (Partitur mit Noten und Tab, Taktart-Auswahl oben). Unten die Statusleiste mit Treiber, Puffer und Latenz wie bei Drum Programmer. Ein GUI-Entwurf entsteht in AP0 und wird mit Alex abgestimmt.
+Ein Hauptfenster mit drei Bereichen: oben Transportleiste, links die **Spurenansicht** (Stimmen mit Eingängen, Rec-Taste, Pegel, Lautstärke, Wellenform der Takes und Beat-Raster darüber), rechts bzw. umschaltbar die **Notenansicht** (Partitur mit Noten und Tab, Taktart-Auswahl oben). Unten die Statusleiste mit Treiber, Puffer und Latenz wie bei Drum Programmer. Der [GUI-Entwurf v0.1](GUI-Entwurf_v0.1.png) ([hell](GUI-Entwurf_v0.1_hell.png)) aus AP0 zeigt dieses Hauptfenster mit allen MVP-Elementen und den v1.0-Elementen ausgegraut; die Legende ordnet jedem Bereich seine Anforderungen zu. Alex hat ihn am 17.10.2026 als Referenz bestätigt.
 
 ## 7 Qualitätsanforderungen
 
