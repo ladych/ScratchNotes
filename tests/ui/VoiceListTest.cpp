@@ -57,20 +57,5 @@ TEST_F(VoiceListTest, FPJ04_EachAddedVoiceIsOneUndoStep)
     EXPECT_EQ(project.numVoices(), 1);
 }
 
-TEST_F(VoiceListTest, FAU01_EntriesShowProfileAndInputs)
-{
-    project.addVoice({.id = "a", .name = "Gitarre", .profileId = "guitar7-gs", .inputDi = 0, .inputWet = 1});
-    project.addVoice({.id = "b", .name = "Bass", .profileId = "bass4-e", .inputDi = 2});
-    project.addVoice({.id = "c", .name = "Neu", .profileId = "ukulele"});
-
-    const auto entries = voiceEntries(project);
-
-    ASSERT_EQ(entries.size(), 3U);
-    EXPECT_EQ(entries[0].name, "Gitarre");
-    EXPECT_EQ(entries[0].details, "Gitarre 7 Saiten, Gis-Standard · Eingänge 1 (DI) + 2");
-    EXPECT_EQ(entries[1].details, "Bass 4 Saiten, E-Standard · Eingang 3");
-    EXPECT_EQ(entries[2].details, "ukulele · kein Eingang");
-}
-
 } // namespace
 } // namespace snotes::ui

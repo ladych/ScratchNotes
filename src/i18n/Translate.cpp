@@ -1,5 +1,6 @@
 #include "i18n/Translate.h"
 
+#include <array>
 #include <cstddef>
 
 namespace snotes::i18n
@@ -8,6 +9,34 @@ namespace snotes::i18n
 std::string tr(const char* english)
 {
     return trJuce(english).toStdString();
+}
+
+std::string tr(const char* english, std::string_view first)
+{
+    const std::array arguments{first};
+    return substitute(tr(english), arguments);
+}
+
+std::string tr(const char* english, std::string_view first, std::string_view second)
+{
+    const std::array arguments{first, second};
+    return substitute(tr(english), arguments);
+}
+
+std::string tr(const char* english, std::string_view first, std::string_view second, std::string_view third)
+{
+    const std::array arguments{first, second, third};
+    return substitute(tr(english), arguments);
+}
+
+std::string tr(const char* english,
+               std::string_view first,
+               std::string_view second,
+               std::string_view third,
+               std::string_view fourth)
+{
+    const std::array arguments{first, second, third, fourth};
+    return substitute(tr(english), arguments);
 }
 
 juce::String trJuce(const char* english)

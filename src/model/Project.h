@@ -88,6 +88,8 @@ public:
     [[nodiscard]] std::optional<Take> findTake(const std::string& id) const;
     /// The take that plays and is transcribed; none while the voice has no takes.
     [[nodiscard]] std::optional<Take> activeTake() const;
+    /// Index of activeTake(), -1 if there is none.
+    [[nodiscard]] int activeTakeIndex() const;
     /// The new take becomes the active one.
     Take addTake(const TakeData& data);
     /// If the active take is removed, the last remaining take becomes active.

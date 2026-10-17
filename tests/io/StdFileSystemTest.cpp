@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <span>
 #include <string>
 
 namespace snotes::io
@@ -118,6 +119,28 @@ TEST_F(StdFileSystemTest, FPJ02_CopyFileReplacesTheTarget)
 TEST_F(StdFileSystemTest, FPJ02_CopyingMissingFileFails)
 {
     EXPECT_FALSE(fileSystem.copyFile(root / "missing.wav", root / "copy.wav"));
+}
+
+TEST_F(StdFileSystemTest, FAU02_BinaryFileAppendsAndOverwrites)
+{
+    const auto file = root / "take.wav";
+    auto binary = fileSystem.createBinaryFile(file);
+    ASSERT_NE(binary, nullptr);
+    const std::string head = "abcd";
+    const std::string tail = "ef";
+    const std::string patch = "XY";
+
+    EXPECT_TRUE(binary->append(std::as_bytes(std::span{head})));
+    EXPECT_TRUE(binary->append(std::as_bytes(std::span{tail})));
+    EXPECT_TRUE(binary->overwrite(1, std::as_bytes(std::span{patch})));
+    EXPECT_TRUE(binary->flush());
+
+    EXPECT_EQ(fileSystem.readText(file), std::optional<std::string>{"aXYdef"});
+}
+
+TEST_F(StdFileSystemTest, FAU02_BinaryFileInMissingFolderFails)
+{
+    EXPECT_EQ(fileSystem.createBinaryFile(root / "missing" / "take.wav"), nullptr);
 }
 
 } // namespace

@@ -185,6 +185,17 @@ TEST_F(ProjectTest, FAU04_MovesTakes)
     EXPECT_EQ(take.latencyOffsetSamples(), -12);
 }
 
+TEST_F(ProjectTest, FAU04_KnowsTheIndexOfTheActiveTake)
+{
+    auto voice = addGuitar();
+    EXPECT_EQ(voice.activeTakeIndex(), -1);
+
+    voice.addTake(takeData("t1"));
+    voice.addTake(takeData("t2"));
+
+    EXPECT_EQ(voice.activeTakeIndex(), 1);
+}
+
 TEST_F(ProjectTest, FAU04_ChoosesTheActiveTake)
 {
     auto voice = addGuitar();

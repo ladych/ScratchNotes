@@ -229,6 +229,38 @@ TEST_F(DocumentControllerTest, FPJ02_CancelledSaveAsSavesNothing)
     EXPECT_TRUE(controller.hasUnsavedChanges());
 }
 
+TEST_F(DocumentControllerTest, FAU02_WithFolderSavesANewProjectFirst)
+{
+    EXPECT_CALL(repository, save(_, projectsFolder / "Notizen 2026-10-17 09-40"))
+        .WillOnce(Return(ProjectFileError::none));
+    std::optional<fs::path> reported;
+
+    controller.withFolder([&reported](const std::optional<fs::path>& folder) { reported = folder; });
+
+    EXPECT_EQ(reported, projectsFolder / "Notizen 2026-10-17 09-40");
+}
+
+TEST_F(DocumentControllerTest, FAU02_WithFolderReportsTheFolderOfASavedProject)
+{
+    saveAs(rehearsal);
+    EXPECT_CALL(repository, save(_, _)).Times(0);
+    std::optional<fs::path> reported;
+
+    controller.withFolder([&reported](const std::optional<fs::path>& folder) { reported = folder; });
+
+    EXPECT_EQ(reported, rehearsal);
+}
+
+TEST_F(DocumentControllerTest, FAU02_WithFolderReportsNothingIfSavingFailed)
+{
+    EXPECT_CALL(repository, save(_, _)).WillOnce(Return(ProjectFileError::writeFailed));
+    std::optional<fs::path> reported = rehearsal;
+
+    controller.withFolder([&reported](const std::optional<fs::path>& folder) { reported = folder; });
+
+    EXPECT_FALSE(reported.has_value());
+}
+
 // ----- Open ---------------------------------------------------------------------------------------
 
 TEST_F(DocumentControllerTest, FPJ02_OpenLoadsTheFolderOfTheChosenFile)

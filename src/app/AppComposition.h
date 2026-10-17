@@ -5,6 +5,9 @@
 #include "app/JuceDocumentView.h"
 #include "app/MainMenu.h"
 #include "app/Theme.h"
+#include "app/WriterThread.h"
+#include "engine/InputMeter.h"
+#include "engine/Recorder.h"
 #include "engine/TestToneSource.h"
 #include "i18n/LanguageCatalog.h"
 #include "io/ProjectRepository.h"
@@ -13,7 +16,9 @@
 #include "model/SnapshotPublisher.h"
 #include "model/UuidGenerator.h"
 #include "ui/DocumentController.h"
+#include "ui/RecordingController.h"
 #include "ui/ThemeSetting.h"
+#include "ui/TrackList.h"
 
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -22,6 +27,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace snotes::app
 {
@@ -58,6 +64,7 @@ private:
     void chooseLanguage(const std::string& setting);
     void showAudioSettings();
     void addVoice();
+    [[nodiscard]] std::vector<std::string> inputNames();
 
     std::function<void()> quit_;
     io::StdFileSystem fileSystem_;
@@ -77,6 +84,12 @@ private:
     io::SettingsStore lastProjectSettings_;
     JuceDocumentView documentView_;
     ui::DocumentController document_;
+    // Recording (AP2): the audio thread fills the session's rings, the writer thread writes the files.
+    engine::InputMeter inputMeter_;
+    engine::Recorder recorder_;
+    WriterThread writerThread_;
+    ui::TrackEditor trackEditor_;
+    ui::RecordingController recording_;
     io::SettingsStore deviceSettings_;
     engine::TestToneSource testTone_;
     AudioCallback audioCallback_;

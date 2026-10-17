@@ -31,6 +31,13 @@ struct EditActions
     std::function<void()> addVoice;
 };
 
+/// Actions of the menu "Aufnahme".
+struct RecordActions
+{
+    std::function<void()> toggle;
+    std::function<bool()> recording;
+};
+
 /// Actions of the menu "Audio".
 struct AudioMenuActions
 {
@@ -49,14 +56,15 @@ struct HelpActions
     std::function<void(const std::string& setting)> chooseTheme;
 };
 
-/// Humble object (E-03): menus "Datei", "Bearbeiten", "Audio" and "Hilfe" with their shortcuts, forwarding
-/// every command to the actions.
+/// Humble object (E-03): menus "Datei", "Bearbeiten", "Aufnahme", "Audio" and "Hilfe" with their shortcuts,
+/// forwarding every command to the actions.
 class MainMenu final : public juce::MenuBarModel, public juce::ApplicationCommandTarget
 {
 public:
     MainMenu(std::function<void()> quit,
              FileActions file,
              EditActions edit,
+             RecordActions record,
              AudioMenuActions audio,
              HelpActions help);
     ~MainMenu() override;
@@ -85,6 +93,7 @@ private:
     std::function<void()> quit_;
     FileActions file_;
     EditActions edit_;
+    RecordActions record_;
     AudioMenuActions audio_;
     HelpActions help_;
     juce::ApplicationCommandManager commands_;

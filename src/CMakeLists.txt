@@ -2,6 +2,9 @@
 add_library(snotes_core STATIC
     audio/DeviceRecovery.cpp
     audio/DriverChoice.cpp
+    engine/AudioRingBuffer.cpp
+    engine/InputMeter.cpp
+    engine/RecordingSession.cpp
     engine/TestToneSource.cpp
     i18n/LanguageCatalog.cpp
     i18n/Translate.cpp
@@ -9,6 +12,8 @@ add_library(snotes_core STATIC
     io/ProjectSerializer.cpp
     io/SettingsStore.cpp
     io/StdFileSystem.cpp
+    io/TakeFileWriter.cpp
+    io/WavWriter.cpp
     model/InstrumentProfile.cpp
     model/Project.cpp
     model/ProjectFactory.cpp
@@ -23,7 +28,11 @@ add_library(snotes_core STATIC
     ui/AudioStatus.cpp
     ui/ChannelOverview.cpp
     ui/DocumentController.cpp
+    ui/LevelMeter.cpp
+    ui/RecordingController.cpp
+    ui/RecordingTime.cpp
     ui/ThemeSetting.cpp
+    ui/TrackList.cpp
     ui/VoiceList.cpp
 )
 target_include_directories(snotes_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -45,6 +54,8 @@ set(SNOTES_APP_SOURCES
     app/JuceDocumentView.cpp
     app/MainComponent.cpp
     app/MainMenu.cpp
+    app/TrackView.cpp
+    app/WriterThread.cpp
 )
 
 juce_add_gui_app(ScratchNotes

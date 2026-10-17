@@ -25,3 +25,7 @@ src/app/JuceDocumentView.h      # JUCE message boxes and file choosers for ui::D
 src/app/JuceDocumentView.cpp    # JUCE message boxes and file choosers for ui::DocumentController
 src/engine/ProjectSnapshot.h    # plain data, declarations only
 src/model/ModelIds.h            # identifier constants, declarations only
+src/app/TrackView.h             # JUCE track view: rows, meters, waveforms; content from ui::trackRows, edits via ui::TrackEditor
+src/app/TrackView.cpp           # JUCE track view: rows, meters, waveforms; content from ui::trackRows, edits via ui::TrackEditor
+src/app/WriterThread.h          # juce::Thread pumping io::TakeFileWriter, no logic
+src/app/WriterThread.cpp        # juce::Thread pumping io::TakeFileWriter, no logic

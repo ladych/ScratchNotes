@@ -1,6 +1,9 @@
 #pragma once
 
+#include "io/IBinaryFile.h"
+
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -21,6 +24,9 @@ public:
     virtual bool rename(const std::filesystem::path& from, const std::filesystem::path& to) = 0;
     /// Replaces an existing target file.
     virtual bool copyFile(const std::filesystem::path& from, const std::filesystem::path& to) = 0;
+    /// Creates or empties the file for writing; nullptr if that fails.
+    [[nodiscard]] virtual std::unique_ptr<IBinaryFile>
+    createBinaryFile(const std::filesystem::path& file) = 0;
 
 protected:
     IFileSystem() = default;

@@ -1,3 +1,6 @@
+#include "engine/InputMeter.h"
+#include "engine/Recorder.h"
+#include "engine/RecordingSession.h"
 #include "engine/SpscQueue.h"
 #include "engine/TestToneSource.h"
 
@@ -72,6 +75,31 @@ TEST(RealtimeAllocationTest, Q04_QueueDoesNotAllocate)
 
     EXPECT_EQ(allocationCount, 0);
     EXPECT_EQ(value, 999);
+}
+
+TEST(RealtimeAllocationTest, Q04_RecordingDoesNotAllocate)
+{
+    Recorder recorder;
+    InputMeter meter;
+    RecordingSession session{{0, 1}};
+    std::array<float, 128> left{};
+    std::array<float, 128> right{};
+    const std::array<const float*, 2> channels{left.data(), right.data()};
+    std::array<float, 128> drained{};
+    recorder.start(session);
+
+    countAllocations = true;
+    for (int block = 0; block < 200; ++block)
+    {
+        meter.process(channels.data(), 2, 128);
+        recorder.process(channels.data(), 2, 128);
+        static_cast<void>(session.ring(0).read(drained.data(), drained.size()));
+        static_cast<void>(session.ring(1).read(drained.data(), drained.size()));
+    }
+    countAllocations = false;
+
+    EXPECT_EQ(allocationCount, 0);
+    EXPECT_EQ(session.recordedSamples(), 200 * 128);
 }
 
 } // namespace

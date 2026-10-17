@@ -191,6 +191,12 @@ std::optional<Take> Voice::activeTake() const
     return findTake(getString(ids::activeTakeId));
 }
 
+int Voice::activeTakeIndex() const
+{
+    const auto takes = tree().getChildWithName(ids::takes);
+    return takes.indexOf(takes.getChildWithProperty(ids::id, tree()[ids::activeTakeId]));
+}
+
 Take Voice::addTake(const TakeData& data)
 {
     juce::ValueTree take{ids::take};
