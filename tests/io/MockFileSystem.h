@@ -18,6 +18,10 @@ public:
                 rename,
                 (const std::filesystem::path& from, const std::filesystem::path& to),
                 (override));
+    MOCK_METHOD(bool,
+                copyFile,
+                (const std::filesystem::path& from, const std::filesystem::path& to),
+                (override));
 };
 
 } // namespace snotes::io

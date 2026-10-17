@@ -45,4 +45,11 @@ bool StdFileSystem::rename(const std::filesystem::path& from, const std::filesys
     return !error;
 }
 
+bool StdFileSystem::copyFile(const std::filesystem::path& from, const std::filesystem::path& to)
+{
+    std::error_code error;
+    std::filesystem::copy_file(from, to, std::filesystem::copy_options::overwrite_existing, error);
+    return !error;
+}
+
 } // namespace snotes::io

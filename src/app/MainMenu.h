@@ -12,6 +12,25 @@
 namespace snotes::app
 {
 
+/// Actions of the menu "Datei" besides "Beenden".
+struct FileActions
+{
+    std::function<void()> newProject;
+    std::function<void()> open;
+    std::function<void()> save;
+    std::function<void()> saveAs;
+};
+
+/// Actions of the menu "Bearbeiten".
+struct EditActions
+{
+    std::function<void()> undo;
+    std::function<void()> redo;
+    std::function<bool()> canUndo;
+    std::function<bool()> canRedo;
+    std::function<void()> addVoice;
+};
+
 /// Actions of the menu "Audio".
 struct AudioMenuActions
 {
@@ -30,12 +49,16 @@ struct HelpActions
     std::function<void(const std::string& setting)> chooseTheme;
 };
 
-/// Humble object (E-03): menus "Datei", "Audio" and "Hilfe" with their shortcuts, forwarding every command
-/// to the actions.
+/// Humble object (E-03): menus "Datei", "Bearbeiten", "Audio" and "Hilfe" with their shortcuts, forwarding
+/// every command to the actions.
 class MainMenu final : public juce::MenuBarModel, public juce::ApplicationCommandTarget
 {
 public:
-    MainMenu(std::function<void()> quit, AudioMenuActions audio, HelpActions help);
+    MainMenu(std::function<void()> quit,
+             FileActions file,
+             EditActions edit,
+             AudioMenuActions audio,
+             HelpActions help);
     ~MainMenu() override;
 
     MainMenu(const MainMenu&) = delete;
@@ -60,6 +83,8 @@ private:
     [[nodiscard]] std::function<void()> actionFor(juce::CommandID commandID) const;
 
     std::function<void()> quit_;
+    FileActions file_;
+    EditActions edit_;
     AudioMenuActions audio_;
     HelpActions help_;
     juce::ApplicationCommandManager commands_;

@@ -14,12 +14,20 @@ namespace
 namespace command
 {
 constexpr juce::CommandID fileQuit = 0x1001;
+constexpr juce::CommandID fileNew = 0x1002;
+constexpr juce::CommandID fileOpen = 0x1003;
+constexpr juce::CommandID fileSave = 0x1004;
+constexpr juce::CommandID fileSaveAs = 0x1005;
+constexpr juce::CommandID editUndo = 0x1101;
+constexpr juce::CommandID editRedo = 0x1102;
+constexpr juce::CommandID editAddVoice = 0x1103;
 constexpr juce::CommandID audioSettings = 0x2001;
 constexpr juce::CommandID audioTestTone = 0x2002;
 constexpr juce::CommandID helpAbout = 0x9001;
 } // namespace command
 
 constexpr int kCtrl = juce::ModifierKeys::commandModifier;
+constexpr int kCtrlShift = juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier;
 
 struct CommandSpec
 {
@@ -32,6 +40,48 @@ struct CommandSpec
 };
 
 constexpr std::array kCommands{
+    CommandSpec{command::fileNew,
+                i18n::marked("New project"),
+                i18n::marked("Start a new project"),
+                i18n::marked("File"),
+                'n',
+                kCtrl},
+    CommandSpec{command::fileOpen,
+                i18n::marked("Open project..."),
+                i18n::marked("Open the projekt.snotes of a project folder"),
+                i18n::marked("File"),
+                'o',
+                kCtrl},
+    CommandSpec{command::fileSave,
+                i18n::marked("Save"),
+                i18n::marked("Save the project in its folder"),
+                i18n::marked("File"),
+                's',
+                kCtrl},
+    CommandSpec{command::fileSaveAs,
+                i18n::marked("Save as..."),
+                i18n::marked("Save the project with its audio in a new folder"),
+                i18n::marked("File"),
+                's',
+                kCtrlShift},
+    CommandSpec{command::editUndo,
+                i18n::marked("Undo"),
+                i18n::marked("Undo the last change"),
+                i18n::marked("Edit"),
+                'z',
+                kCtrl},
+    CommandSpec{command::editRedo,
+                i18n::marked("Redo"),
+                i18n::marked("Redo the last undone change"),
+                i18n::marked("Edit"),
+                'y',
+                kCtrl},
+    CommandSpec{command::editAddVoice,
+                i18n::marked("Add voice"),
+                i18n::marked("Add a voice on the next free input"),
+                i18n::marked("Edit"),
+                0,
+                0},
     CommandSpec{command::fileQuit,
                 i18n::marked("Quit"),
                 i18n::marked("Quit the program"),
@@ -58,7 +108,7 @@ constexpr std::array kCommands{
                 0},
 };
 
-constexpr int kHelpMenu = 2;
+constexpr int kHelpMenu = 3;
 /// Item IDs of the submenus "Sprache" and "Farbschema", outside the command IDs.
 constexpr int kFirstLanguageItem = 0x9100;
 constexpr int kFirstThemeItem = 0x9200;
@@ -69,8 +119,11 @@ std::vector<juce::CommandID> menuCommands(int menuIndex)
     switch (menuIndex)
     {
     case 0:
-        return {command::fileQuit};
+        return {
+            command::fileNew, command::fileOpen, command::fileSave, command::fileSaveAs, command::fileQuit};
     case 1:
+        return {command::editUndo, command::editRedo, command::editAddVoice};
+    case 2:
         return {command::audioSettings, command::audioTestTone};
     default:
         return {command::helpAbout};
@@ -87,8 +140,10 @@ const CommandSpec* findCommand(juce::CommandID id)
 
 } // namespace
 
-MainMenu::MainMenu(std::function<void()> quit, AudioMenuActions audio, HelpActions help)
-    : quit_(std::move(quit)), audio_(std::move(audio)), help_(std::move(help))
+MainMenu::MainMenu(
+    std::function<void()> quit, FileActions file, EditActions edit, AudioMenuActions audio, HelpActions help)
+    : quit_(std::move(quit)), file_(std::move(file)), edit_(std::move(edit)), audio_(std::move(audio)),
+      help_(std::move(help))
 {
     commands_.registerAllCommandsForTarget(this);
     commands_.setFirstCommandTarget(this);
@@ -103,7 +158,8 @@ MainMenu::~MainMenu()
 juce::StringArray MainMenu::getMenuBarNames()
 {
     juce::StringArray names;
-    for (const auto* name : {i18n::marked("File"), i18n::marked("Audio"), i18n::marked("Help")})
+    for (const auto* name :
+         {i18n::marked("File"), i18n::marked("Edit"), i18n::marked("Audio"), i18n::marked("Help")})
         names.add(i18n::trJuce(name));
     return names;
 }
@@ -112,7 +168,11 @@ juce::PopupMenu MainMenu::getMenuForIndex(int menuIndex, const juce::String& /*m
 {
     juce::PopupMenu menu;
     for (const auto id : menuCommands(menuIndex))
+    {
+        if (id == command::fileQuit || id == command::editAddVoice)
+            menu.addSeparator();
         menu.addCommandItem(&commands_, id);
+    }
     if (menuIndex == kHelpMenu)
     {
         juce::PopupMenu languages;
@@ -165,6 +225,10 @@ void MainMenu::getCommandInfo(juce::CommandID commandID, juce::ApplicationComman
         result.addDefaultKeypress(spec->key, spec->modifiers);
     if (commandID == command::audioTestTone)
         result.setTicked(audio_.testToneOn());
+    if (commandID == command::editUndo)
+        result.setActive(edit_.canUndo());
+    if (commandID == command::editRedo)
+        result.setActive(edit_.canRedo());
 }
 
 bool MainMenu::perform(const InvocationInfo& info)
@@ -182,6 +246,20 @@ std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
     {
     case command::fileQuit:
         return quit_;
+    case command::fileNew:
+        return file_.newProject;
+    case command::fileOpen:
+        return file_.open;
+    case command::fileSave:
+        return file_.save;
+    case command::fileSaveAs:
+        return file_.saveAs;
+    case command::editUndo:
+        return edit_.undo;
+    case command::editRedo:
+        return edit_.redo;
+    case command::editAddVoice:
+        return edit_.addVoice;
     case command::audioSettings:
         return audio_.showSettings;
     case command::audioTestTone:
