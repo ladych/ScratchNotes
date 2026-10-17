@@ -49,6 +49,18 @@ TEST_F(TrackListTest, FAU01_ProfileChoicesAreTranslated)
                             "Bass 5 Saiten, Gis-Standard"));
 }
 
+TEST(VisibleSecondsTest, FWI01_ShowsAtLeastHalfAMinute)
+{
+    EXPECT_DOUBLE_EQ(visibleSeconds(0.0, 0.0), 30.0);
+    EXPECT_DOUBLE_EQ(visibleSeconds(24.0, 3.0), 30.0);
+}
+
+TEST(VisibleSecondsTest, FWI01_GrowsWithTheTakesAndThePosition)
+{
+    EXPECT_DOUBLE_EQ(visibleSeconds(71.0, 10.0), 80.0);
+    EXPECT_DOUBLE_EQ(visibleSeconds(10.0, 95.5), 110.0);
+}
+
 TEST_F(TrackListTest, FAU01_InputChoicesStartWithNone)
 {
     EXPECT_THAT(inputChoices({"Hi-Z 1", "Mic 2"}), ElementsAre("— kein —", "1 · Hi-Z 1", "2 · Mic 2"));
@@ -65,6 +77,7 @@ TEST_F(TrackListTest, FAU01_RowsShowTheVoiceSettings)
     EXPECT_EQ(all[0].diChoice, 1);
     EXPECT_EQ(all[0].wetChoice, 2);
     EXPECT_FALSE(all[0].armed);
+    EXPECT_FALSE(all[0].monitored);
     EXPECT_EQ(all[1].profile, -1);
     EXPECT_EQ(all[1].wetChoice, 0);
     EXPECT_TRUE(all[1].armed);
@@ -81,6 +94,16 @@ TEST_F(TrackListTest, FAU04_RowsListTheTakesAndTheActiveFiles)
     EXPECT_TRUE(all[1].takes.empty());
     EXPECT_EQ(all[1].activeTake, -1);
     EXPECT_EQ(all[1].diFile, "");
+}
+
+TEST_F(TrackListTest, FWI05_RowsPlaceTheActiveTakeAfterLatencyCompensation)
+{
+    auto take = project.voice(0).take(1);
+    take.setStartSample(96000);
+    take.setLatencyOffsetSamples(480);
+
+    EXPECT_DOUBLE_EQ(rows()[0].takeStartSeconds, (96000.0 - 480.0) / 48000.0);
+    EXPECT_DOUBLE_EQ(rows()[1].takeStartSeconds, 0.0);
 }
 
 TEST_F(TrackListTest, FPJ03_MissingAudioIsMarked)
@@ -113,9 +136,12 @@ TEST_F(TrackListTest, FAU01_EditsVoiceSettingsAsSeparateUndoSteps)
     editor.chooseInputs("g", 3, 0);
     editor.setMuted("g", true);
     editor.setSolo("g", true);
+    editor.setMonitored("g", true);
     editor.setGain("g", 0.5);
 
     const auto voice = project.voice(0);
+    EXPECT_TRUE(voice.isMonitored());
+    EXPECT_TRUE(rows()[0].monitored);
     EXPECT_EQ(voice.name(), "Rhythmus");
     EXPECT_EQ(voice.profileId(), "bass5-gs");
     EXPECT_EQ(voice.inputDi(), 2);
@@ -127,6 +153,18 @@ TEST_F(TrackListTest, FAU01_EditsVoiceSettingsAsSeparateUndoSteps)
     undoManager.undo();
     EXPECT_DOUBLE_EQ(voice.gain(), 1.0);
     EXPECT_TRUE(voice.isSolo());
+}
+
+TEST_F(TrackListTest, FWI07_SwitchesTheClickAndSetsItsTempo)
+{
+    editor.setClickOn(true);
+    editor.setClickBpm(95.0);
+
+    EXPECT_TRUE(project.mix().isClickOn());
+    EXPECT_DOUBLE_EQ(project.mix().clickBpm(), 95.0);
+    undoManager.undo();
+    EXPECT_DOUBLE_EQ(project.mix().clickBpm(), 120.0);
+    EXPECT_TRUE(project.mix().isClickOn());
 }
 
 TEST_F(TrackListTest, FAU01_InvalidProfileIsIgnored)

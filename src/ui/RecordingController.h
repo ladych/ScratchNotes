@@ -2,6 +2,7 @@
 
 #include "engine/Recorder.h"
 #include "engine/RecordingSession.h"
+#include "engine/Transport.h"
 #include "io/IFileSystem.h"
 #include "io/TakeFileWriter.h"
 #include "model/IIdGenerator.h"
@@ -31,14 +32,18 @@ struct RecordingEnvironment
     std::function<void(FolderCallback)> projectFolder;
     /// Sample rate of the open audio device, 0 if none is open.
     std::function<double()> deviceSampleRate;
+    /// Round trip of the open device in samples, including the user's offset (F-WI-05).
+    std::function<std::int64_t()> latencySamples;
     /// Local date and time for Take::recordedAt, e.g. "2026-10-17T09:40:00".
     std::function<std::string()> now;
     std::function<void(const std::string& title, const std::string& message)> showMessage;
 };
 
-/// Presenter for recording (F-AU-02, F-AU-04, F-AU-05): arms voices, starts and stops a pass of all armed
-/// voices together and turns it into one take per voice. The DI signal and, if the voice has an input for
-/// it, the processed signal go into their own WAV files in the project's audio/ folder.
+/// Presenter for recording (F-AU-02, F-AU-04, F-AU-05, F-WI-04): arms voices, starts and stops a pass of all
+/// armed voices together with the transport and turns it into one take per voice. The DI signal and, if the
+/// voice has an input for it, the processed signal go into their own WAV files in the project's audio/
+/// folder. Each take remembers the song position it started at and the round trip at that time, so it plays
+/// in time with the voices heard while it was recorded (F-WI-05).
 class RecordingController
 {
 public:
@@ -53,6 +58,7 @@ public:
     RecordingController(juce::ValueTree project,
                         juce::UndoManager& undoManager,
                         engine::IRecorderControl& recorder,
+                        engine::Transport& transport,
                         io::IFileSystem& fileSystem,
                         IWriterThread& writerThread,
                         model::IIdGenerator& idGenerator,
@@ -108,6 +114,7 @@ private:
     juce::ValueTree project_;
     juce::UndoManager& undoManager_;
     engine::IRecorderControl& recorder_;
+    engine::Transport& transport_;
     io::IFileSystem& fileSystem_;
     IWriterThread& writerThread_;
     model::IIdGenerator& idGenerator_;
@@ -115,6 +122,7 @@ private:
     std::set<std::string> armed_;
     State state_ = State::idle;
     double sampleRate_ = 0.0;
+    std::int64_t latency_ = 0;
     std::unique_ptr<engine::RecordingSession> session_;
     std::unique_ptr<io::TakeFileWriter> writer_;
     std::vector<PendingTake> pending_;

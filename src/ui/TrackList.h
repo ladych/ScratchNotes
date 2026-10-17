@@ -24,6 +24,7 @@ struct TrackRow
     bool armed = false;
     bool muted = false;
     bool solo = false;
+    bool monitored = false;
     double gain = 1.0;
     /// e.g. "Take 2 · 09:40"
     std::vector<std::string> takes;
@@ -32,7 +33,13 @@ struct TrackRow
     /// Files of the active take relative to the project folder; empty without take or signal.
     std::string diFile;
     std::string wetFile;
+    /// Song time in seconds at which the active take plays, after latency compensation (F-WI-05).
+    double takeStartSeconds = 0.0;
 };
+
+/// Seconds the track view shows from the song start: the takes and the position with some room behind,
+/// in steps of 10 seconds, at least 30 seconds.
+[[nodiscard]] double visibleSeconds(double contentEndSeconds, double positionSeconds);
 
 /// Translated names of the instrument profiles, in the order of model::instrumentProfiles().
 [[nodiscard]] std::vector<std::string> instrumentProfileChoices();
@@ -56,11 +63,15 @@ public:
     void chooseInputs(const std::string& voiceId, int diChoice, int wetChoice);
     void setMuted(const std::string& voiceId, bool muted);
     void setSolo(const std::string& voiceId, bool solo);
+    void setMonitored(const std::string& voiceId, bool monitored);
     void setGain(const std::string& voiceId, double gain);
     void chooseTake(const std::string& voiceId, int take);
     /// The audio files stay on disk, so the deletion can be undone.
     void deleteActiveTake(const std::string& voiceId);
     void removeVoice(const std::string& voiceId);
+    /// Click on or off and its tempo (F-WI-07).
+    void setClickOn(bool on);
+    void setClickBpm(double beatsPerMinute);
 
 private:
     void edit(const std::string& voiceId, const std::function<void(model::Voice&)>& change);

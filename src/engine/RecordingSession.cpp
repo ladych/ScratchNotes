@@ -11,8 +11,13 @@ RecordingSession::RecordingSession(const std::vector<int>& inputs, std::size_t r
         channels_.push_back(std::make_unique<AudioRingBuffer>(ringCapacity));
 }
 
-void RecordingSession::record(const float* const* inputs, int numInputs, int numSamples) noexcept
+void RecordingSession::record(const float* const* inputs,
+                              int numInputs,
+                              int numSamples,
+                              std::int64_t position) noexcept
 {
+    if (start_.load() == kNotStarted)
+        start_.store(position);
     const auto count = static_cast<std::size_t>(numSamples);
     const std::span deviceInputs{inputs, static_cast<std::size_t>(numInputs)};
     std::int64_t dropped = 0;

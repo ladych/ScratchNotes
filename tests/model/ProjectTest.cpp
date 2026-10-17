@@ -111,6 +111,25 @@ TEST_F(ProjectTest, FWI03_GainIsClampedToPlusTwelveDecibels)
     EXPECT_DOUBLE_EQ(project.mix().masterGain(), 4.0);
 }
 
+TEST_F(ProjectTest, FWI07_ClickIsOffWith120BeatsPerMinuteByDefault)
+{
+    EXPECT_FALSE(project.mix().isClickOn());
+    EXPECT_DOUBLE_EQ(project.mix().clickBpm(), 120.0);
+}
+
+TEST_F(ProjectTest, FWI07_ClickTempoIsClamped)
+{
+    auto mix = project.mix();
+    mix.setClickOn(true);
+    mix.setClickBpm(500.0);
+    EXPECT_TRUE(mix.isClickOn());
+    EXPECT_DOUBLE_EQ(mix.clickBpm(), 300.0);
+    mix.setClickBpm(10.0);
+    EXPECT_DOUBLE_EQ(mix.clickBpm(), 30.0);
+    mix.setClickOn(false);
+    EXPECT_FALSE(mix.isClickOn());
+}
+
 TEST_F(ProjectTest, FAU01_FindsVoicesById)
 {
     addGuitar();

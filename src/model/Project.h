@@ -107,6 +107,17 @@ public:
     [[nodiscard]] double masterGain() const;
     /// Clamped like Voice::setGain.
     void setMasterGain(double gain);
+
+    static constexpr double kDefaultClickBpm = 120.0;
+    static constexpr double kMinClickBpm = 30.0;
+    static constexpr double kMaxClickBpm = 300.0;
+
+    /// Click with a fixed tempo (F-WI-07), off by default.
+    [[nodiscard]] bool isClickOn() const;
+    [[nodiscard]] double clickBpm() const;
+    void setClickOn(bool on);
+    /// Clamped to kMinClickBpm..kMaxClickBpm.
+    void setClickBpm(double beatsPerMinute);
 };
 
 /// Root of the model, saved as projekt.snotes in the project folder.

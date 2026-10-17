@@ -1,5 +1,7 @@
 #include "ui/RecordingController.h"
 
+#include <algorithm>
+
 #include "i18n/Translate.h"
 #include "io/Utf8Path.h"
 #include "model/ModelIds.h"
@@ -25,12 +27,14 @@ std::string audioFile(const std::string& base, bool processed)
 RecordingController::RecordingController(juce::ValueTree project,
                                          juce::UndoManager& undoManager,
                                          engine::IRecorderControl& recorder,
+                                         engine::Transport& transport,
                                          io::IFileSystem& fileSystem,
                                          IWriterThread& writerThread,
                                          model::IIdGenerator& idGenerator,
                                          RecordingEnvironment environment)
-    : project_(std::move(project)), undoManager_(undoManager), recorder_(recorder), fileSystem_(fileSystem),
-      writerThread_(writerThread), idGenerator_(idGenerator), environment_(std::move(environment))
+    : project_(std::move(project)), undoManager_(undoManager), recorder_(recorder), transport_(transport),
+      fileSystem_(fileSystem), writerThread_(writerThread), idGenerator_(idGenerator),
+      environment_(std::move(environment))
 {
 }
 
@@ -102,6 +106,7 @@ void RecordingController::stop()
     if (state_ != State::recording)
         return;
     recorder_.stop();
+    transport_.stop();
     state_ = State::stopping;
     poll();
 }
@@ -137,11 +142,13 @@ void RecordingController::begin(const std::filesystem::path& folder, double samp
     if (!hasTakes())
         project_.setProperty(model::ids::sampleRate, sampleRate, nullptr);
     sampleRate_ = sampleRate;
+    latency_ = environment_.latencySamples();
     session_ = std::make_unique<engine::RecordingSession>(files.inputs);
     writer_ = std::make_unique<io::TakeFileWriter>(*session_, std::move(files.writers));
     pending_ = std::move(files.pending);
     writerThread_.attach(*writer_);
     recorder_.start(*session_);
+    transport_.play();
     state_ = State::recording;
 }
 
@@ -221,10 +228,15 @@ void RecordingController::finish()
     writerThread_.detach();
     const bool written = writer_->finish();
     const auto dropped = session_->droppedSamples();
+    const auto start = std::max<std::int64_t>(session_->startSample(), 0);
     undoManager_.beginNewTransaction();
-    for (const auto& take : pending_)
+    for (auto& take : pending_)
+    {
+        take.data.startSample = start;
+        take.data.latencyOffsetSamples = latency_;
         if (auto voice = model::Project{project_, &undoManager_}.findVoice(take.voiceId))
             voice->addTake(take.data);
+    }
     writer_.reset();
     session_.reset();
     pending_.clear();

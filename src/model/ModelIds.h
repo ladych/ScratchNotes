@@ -35,6 +35,8 @@ inline const juce::Identifier startSample{"startSample"};
 inline const juce::Identifier latencyOffsetSamples{"latencyOffsetSamples"};
 inline const juce::Identifier recordedAt{"recordedAt"};
 inline const juce::Identifier masterGain{"masterGain"};
+inline const juce::Identifier click{"click"};
+inline const juce::Identifier clickBpm{"clickBpm"};
 
 /// Runtime-only marker for a take whose audio file was missing when the project was loaded
 /// (F-PJ-03). It is never written to projekt.snotes.

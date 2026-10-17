@@ -42,7 +42,8 @@ class WaveformLane final : public juce::Component, private juce::ChangeListener
 {
 public:
     WaveformLane(TrackView& view, juce::String caption)
-        : thumbnail_(kThumbnailResolution, view.formats(), view.thumbnails()), caption_(std::move(caption))
+        : view_(view), thumbnail_(kThumbnailResolution, view.formats(), view.thumbnails()),
+          caption_(std::move(caption))
     {
         thumbnail_.addChangeListener(this);
     }
@@ -54,9 +55,10 @@ public:
     WaveformLane(WaveformLane&&) = delete;
     WaveformLane& operator=(WaveformLane&&) = delete;
 
-    void show(const juce::File& file, juce::Colour colour)
+    void show(const juce::File& file, juce::Colour colour, double startSeconds)
     {
         colour_ = colour;
+        startSeconds_ = startSeconds;
         if (file == file_)
             return;
         file_ = file;
@@ -75,19 +77,45 @@ public:
         g.setColour(theme::colours().textDim);
         g.setFont(juce::FontOptions{12.0F});
         g.drawText(caption_, getLocalBounds().reduced(kPadding, 2), juce::Justification::topLeft);
-        if (thumbnail_.getTotalLength() <= 0.0)
-            return;
-        g.setColour(colour_);
-        thumbnail_.drawChannel(g, getLocalBounds(), 0.0, thumbnail_.getTotalLength(), 0, 1.0F);
+        const double length = thumbnail_.getTotalLength();
+        if (length > 0.0)
+        {
+            const int left = xFor(startSeconds_);
+            const int right = xFor(startSeconds_ + length);
+            g.setColour(colour_);
+            thumbnail_.drawChannel(g, getLocalBounds().withLeft(left).withRight(right), 0.0, length, 0, 1.0F);
+        }
+        g.setColour(theme::colours().text);
+        g.drawVerticalLine(xFor(view_.positionSeconds()), 0.0F, static_cast<float>(getHeight()));
+    }
+
+    void mouseDown(const juce::MouseEvent& event) override
+    {
+        view_.context().transport.locate(event.position.x / static_cast<float>(getWidth()) *
+                                         view_.visibleSeconds());
+    }
+
+    /// Song time up to which the take reaches, 0 without one.
+    [[nodiscard]] double endSeconds() const
+    {
+        const double length = thumbnail_.getTotalLength();
+        return length > 0.0 ? startSeconds_ + length : 0.0;
     }
 
 private:
     void changeListenerCallback(juce::ChangeBroadcaster* /*source*/) override { repaint(); }
 
+    [[nodiscard]] int xFor(double seconds) const
+    {
+        return juce::roundToInt(seconds / view_.visibleSeconds() * getWidth());
+    }
+
+    TrackView& view_;
     juce::AudioThumbnail thumbnail_;
     juce::File file_;
     juce::String caption_;
     juce::Colour colour_;
+    double startSeconds_ = 0.0;
 };
 
 /// Meter of one input; a click clears the clip marker.
@@ -163,6 +191,7 @@ public:
                                                                        &arm_,
                                                                        &mute_,
                                                                        &solo_,
+                                                                       &monitor_,
                                                                        &gain_,
                                                                        &diMeter_,
                                                                        &wetMeter_,
@@ -192,12 +221,13 @@ public:
         arm_.setToggleState(row.armed, juce::dontSendNotification);
         mute_.setToggleState(row.muted, juce::dontSendNotification);
         solo_.setToggleState(row.solo, juce::dontSendNotification);
+        monitor_.setToggleState(row.monitored, juce::dontSendNotification);
         if (!gain_.isMouseButtonDown())
             gain_.setValue(row.gain, juce::dontSendNotification);
         diMeter_.setInput(row.diChoice - 1);
         wetMeter_.setInput(row.wetChoice - 1);
-        diLane_.show(fileOf(folder, row.diFile), colour);
-        wetLane_.show(fileOf(folder, row.wetFile), colour);
+        diLane_.show(fileOf(folder, row.diFile), colour, row.takeStartSeconds);
+        wetLane_.show(fileOf(folder, row.wetFile), colour, row.takeStartSeconds);
         repaint();
     }
 
@@ -206,6 +236,14 @@ public:
         diMeter_.repaint();
         wetMeter_.repaint();
     }
+
+    void repaintLanes()
+    {
+        diLane_.repaint();
+        wetLane_.repaint();
+    }
+
+    [[nodiscard]] double endSeconds() const { return std::max(diLane_.endSeconds(), wetLane_.endSeconds()); }
 
     void paint(juce::Graphics& g) override
     {
@@ -272,6 +310,10 @@ private:
         solo_.setTooltip(i18n::trJuce("Solo"));
         solo_.setClickingTogglesState(true);
         solo_.onClick = [this] { editor().setSolo(id_, solo_.getToggleState()); };
+        monitor_.setButtonText("I");
+        monitor_.setTooltip(i18n::trJuce("Hear the input while playing (software monitoring)"));
+        monitor_.setClickingTogglesState(true);
+        monitor_.onClick = [this] { editor().setMonitored(id_, monitor_.getToggleState()); };
         gain_.setSliderStyle(juce::Slider::LinearHorizontal);
         gain_.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
         gain_.setRange(0.0, 2.0);
@@ -303,7 +345,7 @@ private:
         wet_.setBounds(line);
         header.removeFromTop(kPadding);
         line = header.removeFromTop(kLineHeight);
-        for (auto* button : {&arm_, &mute_, &solo_})
+        for (auto* button : {&arm_, &mute_, &solo_, &monitor_})
         {
             button->setBounds(line.removeFromLeft(kSmallButton));
             line.removeFromLeft(4);
@@ -340,6 +382,7 @@ private:
     juce::TextButton arm_;
     juce::TextButton mute_;
     juce::TextButton solo_;
+    juce::TextButton monitor_;
     juce::Slider gain_;
     InputMeterBar diMeter_;
     InputMeterBar wetMeter_;
@@ -349,7 +392,7 @@ private:
 
 TrackView::TrackView(TrackViewContext context)
     : context_(std::move(context)), thumbnails_(kThumbnailCacheSize),
-      lastTick_(juce::Time::getMillisecondCounterHiRes()),
+      lastTick_(juce::Time::getMillisecondCounterHiRes()), visibleSeconds_(ui::visibleSeconds(0.0, 0.0)),
       projectListener_(context_.project, [this] { triggerAsyncUpdate(); })
 {
     formats_.registerBasicFormats();
@@ -408,6 +451,22 @@ void TrackView::timerCallback()
         levels_.at(static_cast<std::size_t>(input)).update(context_.meter.takePeak(input), seconds);
     for (auto& row : rows_)
         row->repaintMeters();
+    updateTimeline();
+}
+
+void TrackView::updateTimeline()
+{
+    double contentEnd = 0.0;
+    for (const auto& row : rows_)
+        contentEnd = std::max(contentEnd, row->endSeconds());
+    const double position = positionSeconds();
+    const double visible = ui::visibleSeconds(contentEnd, position);
+    if (visible == visibleSeconds_ && position == shownPosition_)
+        return;
+    visibleSeconds_ = visible;
+    shownPosition_ = position;
+    for (auto& row : rows_)
+        row->repaintLanes();
 }
 
 void TrackView::handleAsyncUpdate()

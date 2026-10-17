@@ -22,8 +22,12 @@ constexpr juce::CommandID editUndo = 0x1101;
 constexpr juce::CommandID editRedo = 0x1102;
 constexpr juce::CommandID editAddVoice = 0x1103;
 constexpr juce::CommandID recordToggle = 0x1201;
+constexpr juce::CommandID transportPlay = 0x1202;
+constexpr juce::CommandID transportStart = 0x1203;
+constexpr juce::CommandID transportClick = 0x1204;
 constexpr juce::CommandID audioSettings = 0x2001;
 constexpr juce::CommandID audioTestTone = 0x2002;
+constexpr juce::CommandID audioLatency = 0x2003;
 constexpr juce::CommandID helpAbout = 0x9001;
 } // namespace command
 
@@ -83,11 +87,29 @@ constexpr std::array kCommands{
                 i18n::marked("Edit"),
                 0,
                 0},
+    CommandSpec{command::transportPlay,
+                i18n::marked("Play/Stop"),
+                i18n::marked("Play the voices from the current position, or stop"),
+                i18n::marked("Transport"),
+                ' ',
+                0},
+    CommandSpec{command::transportStart,
+                i18n::marked("Back to the start"),
+                i18n::marked("Move the position to the start of the song"),
+                i18n::marked("Transport"),
+                0,
+                0},
     CommandSpec{command::recordToggle,
                 i18n::marked("Record"),
                 i18n::marked("Start or stop recording all armed voices"),
-                i18n::marked("Recording"),
+                i18n::marked("Transport"),
                 'r',
+                kCtrl},
+    CommandSpec{command::transportClick,
+                i18n::marked("Click"),
+                i18n::marked("Play a click in the tempo of the top bar"),
+                i18n::marked("Transport"),
+                'k',
                 kCtrl},
     CommandSpec{command::fileQuit,
                 i18n::marked("Quit"),
@@ -107,6 +129,13 @@ constexpr std::array kCommands{
                 i18n::marked("Audio"),
                 't',
                 kCtrl},
+    CommandSpec{
+        command::audioLatency,
+        i18n::marked("Latency compensation..."),
+        i18n::marked("Measure the round trip with a loopback cable and set the compensation of new takes"),
+        i18n::marked("Audio"),
+        0,
+        0},
     CommandSpec{command::helpAbout,
                 i18n::marked("About and licenses..."),
                 i18n::marked("Version, license and the components of other authors"),
@@ -131,9 +160,10 @@ std::vector<juce::CommandID> menuCommands(int menuIndex)
     case 1:
         return {command::editUndo, command::editRedo, command::editAddVoice};
     case 2:
-        return {command::recordToggle};
+        return {
+            command::transportPlay, command::transportStart, command::recordToggle, command::transportClick};
     case 3:
-        return {command::audioSettings, command::audioTestTone};
+        return {command::audioSettings, command::audioLatency, command::audioTestTone};
     default:
         return {command::helpAbout};
     }
@@ -152,11 +182,11 @@ const CommandSpec* findCommand(juce::CommandID id)
 MainMenu::MainMenu(std::function<void()> quit,
                    FileActions file,
                    EditActions edit,
-                   RecordActions record,
+                   TransportActions transport,
                    AudioMenuActions audio,
                    HelpActions help)
-    : quit_(std::move(quit)), file_(std::move(file)), edit_(std::move(edit)), record_(std::move(record)),
-      audio_(std::move(audio)), help_(std::move(help))
+    : quit_(std::move(quit)), file_(std::move(file)), edit_(std::move(edit)),
+      transport_(std::move(transport)), audio_(std::move(audio)), help_(std::move(help))
 {
     commands_.registerAllCommandsForTarget(this);
     commands_.setFirstCommandTarget(this);
@@ -173,7 +203,7 @@ juce::StringArray MainMenu::getMenuBarNames()
     juce::StringArray names;
     for (const auto* name : {i18n::marked("File"),
                              i18n::marked("Edit"),
-                             i18n::marked("Recording"),
+                             i18n::marked("Transport"),
                              i18n::marked("Audio"),
                              i18n::marked("Help")})
         names.add(i18n::trJuce(name));
@@ -185,7 +215,7 @@ juce::PopupMenu MainMenu::getMenuForIndex(int menuIndex, const juce::String& /*m
     juce::PopupMenu menu;
     for (const auto id : menuCommands(menuIndex))
     {
-        if (id == command::fileQuit || id == command::editAddVoice)
+        if (id == command::fileQuit || id == command::editAddVoice || id == command::transportClick)
             menu.addSeparator();
         menu.addCommandItem(&commands_, id);
     }
@@ -241,8 +271,14 @@ void MainMenu::getCommandInfo(juce::CommandID commandID, juce::ApplicationComman
         result.addDefaultKeypress(spec->key, spec->modifiers);
     if (commandID == command::audioTestTone)
         result.setTicked(audio_.testToneOn());
+    if (commandID == command::transportStart)
+        result.addDefaultKeypress(juce::KeyPress::homeKey, 0);
+    if (commandID == command::transportPlay)
+        result.setTicked(transport_.playing());
     if (commandID == command::recordToggle)
-        result.setTicked(record_.recording());
+        result.setTicked(transport_.recording());
+    if (commandID == command::transportClick)
+        result.setTicked(transport_.clickOn());
     if (commandID == command::editUndo)
         result.setActive(edit_.canUndo());
     if (commandID == command::editRedo)
@@ -260,35 +296,28 @@ bool MainMenu::perform(const InvocationInfo& info)
 
 std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
 {
-    switch (commandID)
-    {
-    case command::fileQuit:
-        return quit_;
-    case command::fileNew:
-        return file_.newProject;
-    case command::fileOpen:
-        return file_.open;
-    case command::fileSave:
-        return file_.save;
-    case command::fileSaveAs:
-        return file_.saveAs;
-    case command::editUndo:
-        return edit_.undo;
-    case command::editRedo:
-        return edit_.redo;
-    case command::editAddVoice:
-        return edit_.addVoice;
-    case command::recordToggle:
-        return record_.toggle;
-    case command::audioSettings:
-        return audio_.showSettings;
-    case command::audioTestTone:
-        return audio_.toggleTestTone;
-    case command::helpAbout:
-        return help_.showAbout;
-    default:
-        return {};
-    }
+    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 16> actions{{
+        {command::fileQuit, &quit_},
+        {command::fileNew, &file_.newProject},
+        {command::fileOpen, &file_.open},
+        {command::fileSave, &file_.save},
+        {command::fileSaveAs, &file_.saveAs},
+        {command::editUndo, &edit_.undo},
+        {command::editRedo, &edit_.redo},
+        {command::editAddVoice, &edit_.addVoice},
+        {command::recordToggle, &transport_.toggleRecord},
+        {command::transportPlay, &transport_.togglePlay},
+        {command::transportStart, &transport_.returnToStart},
+        {command::transportClick, &transport_.toggleClick},
+        {command::audioLatency, &audio_.showLatency},
+        {command::audioSettings, &audio_.showSettings},
+        {command::audioTestTone, &audio_.toggleTestTone},
+        {command::helpAbout, &help_.showAbout},
+    }};
+    for (const auto& [id, action] : actions)
+        if (id == commandID)
+            return *action;
+    return {};
 }
 
 } // namespace snotes::app

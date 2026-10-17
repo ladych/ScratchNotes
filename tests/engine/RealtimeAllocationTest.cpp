@@ -1,3 +1,4 @@
+#include "engine/AudioEngine.h"
 #include "engine/InputMeter.h"
 #include "engine/Recorder.h"
 #include "engine/RecordingSession.h"
@@ -8,7 +9,9 @@
 
 #include <array>
 #include <cstdlib>
+#include <memory>
 #include <new>
+#include <vector>
 
 namespace
 {
@@ -92,7 +95,7 @@ TEST(RealtimeAllocationTest, Q04_RecordingDoesNotAllocate)
     for (int block = 0; block < 200; ++block)
     {
         meter.process(channels.data(), 2, 128);
-        recorder.process(channels.data(), 2, 128);
+        recorder.process(channels.data(), 2, 128, 0);
         static_cast<void>(session.ring(0).read(drained.data(), drained.size()));
         static_cast<void>(session.ring(1).read(drained.data(), drained.size()));
     }
@@ -100,6 +103,51 @@ TEST(RealtimeAllocationTest, Q04_RecordingDoesNotAllocate)
 
     EXPECT_EQ(allocationCount, 0);
     EXPECT_EQ(session.recordedSamples(), 200 * 128);
+}
+
+TEST(RealtimeAllocationTest, Q04_PlaybackOverdubClickAndProbeDoNotAllocate)
+{
+    SnapshotExchange<ProjectSnapshot> snapshots;
+    auto snapshot = std::make_unique<ProjectSnapshot>();
+    snapshot->clickBpm = 120.0;
+    VoiceSnapshot voice;
+    voice.inputDi = 0;
+    voice.monitored = true;
+    voice.audio = std::make_shared<const TakeAudio>(std::vector<float>(48000, 0.1F));
+    snapshot->voices = {voice, voice};
+    snapshots.publish(std::move(snapshot));
+    Transport transport;
+    InputMeter meter;
+    Recorder recorder;
+    TestToneSource tone{440.0, 0.5F};
+    LatencyProbe probe;
+    AudioEngine engine{{.snapshots = snapshots,
+                        .transport = transport,
+                        .meter = meter,
+                        .recorder = recorder,
+                        .tone = tone,
+                        .probe = probe}};
+    engine.prepare(48000.0);
+    RecordingSession session{{0}};
+    recorder.start(session);
+    transport.play();
+    probe.start(0);
+    std::array<float, 128> input{};
+    std::array<float, 128> output{};
+    const std::array<const float*, 1> inputs{input.data()};
+    std::array<float*, 1> outputs{output.data()};
+    std::array<float, 128> drained{};
+
+    countAllocations = true;
+    for (int block = 0; block < 200; ++block)
+    {
+        engine.process(inputs.data(), 1, outputs.data(), 1, 128);
+        static_cast<void>(session.ring(0).read(drained.data(), drained.size()));
+    }
+    countAllocations = false;
+
+    EXPECT_EQ(allocationCount, 0);
+    EXPECT_EQ(transport.position(), 200 * 128);
 }
 
 } // namespace

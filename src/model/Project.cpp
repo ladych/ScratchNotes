@@ -241,6 +241,26 @@ void Mix::setMasterGain(double gain)
     set(ids::masterGain, clampGain(gain));
 }
 
+bool Mix::isClickOn() const
+{
+    return getInt(ids::click, 0) != 0;
+}
+
+double Mix::clickBpm() const
+{
+    return getDouble(ids::clickBpm, kDefaultClickBpm);
+}
+
+void Mix::setClickOn(bool on)
+{
+    set(ids::click, on ? 1 : 0);
+}
+
+void Mix::setClickBpm(double beatsPerMinute)
+{
+    set(ids::clickBpm, std::clamp(beatsPerMinute, kMinClickBpm, kMaxClickBpm));
+}
+
 Project::Project(juce::ValueTree tree, juce::UndoManager* undoManager)
     : TreeNode(std::move(tree), undoManager)
 {
