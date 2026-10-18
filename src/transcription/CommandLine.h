@@ -16,6 +16,8 @@ struct CommandLineOptions
     /// Folder for the results; empty writes them next to each recording.
     std::string outputFolder;
     std::vector<std::string> recordings;
+    /// The recordings are unrelated: each one gets its own beat grid instead of one for all voices.
+    bool separateGrids = false;
 };
 
 struct ParsedCommandLine
@@ -25,7 +27,7 @@ struct ParsedCommandLine
     std::string message;
 };
 
-/// Parses the arguments after the program name: [--profile ID] [--out FOLDER] RECORDING...
+/// Parses the arguments after the program name: [--profile ID] [--out FOLDER] [--separate] RECORDING...
 [[nodiscard]] ParsedCommandLine parseCommandLine(const std::vector<std::string>& arguments);
 
 /// Help text with the options and the instrument profiles.

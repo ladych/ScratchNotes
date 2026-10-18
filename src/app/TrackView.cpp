@@ -84,6 +84,12 @@ public:
         g.setColour(theme::colours().gap);
         g.fillRect(getLocalBounds());
         g.setColour(theme::colours().textDim);
+        for (const auto& beat : view_.beatLines())
+        {
+            g.setColour(beat.downbeat ? theme::colours().textDim : theme::colours().outline);
+            g.drawVerticalLine(xFor(beat.seconds), 0.0F, static_cast<float>(getHeight()));
+        }
+        g.setColour(theme::colours().textDim);
         g.setFont(juce::FontOptions{12.0F});
         g.drawText(caption_, getLocalBounds().reduced(kPadding, 2), juce::Justification::topLeft);
         const double length = thumbnail_.getTotalLength();
@@ -487,6 +493,7 @@ void TrackView::updateTimeline()
 void TrackView::handleAsyncUpdate()
 {
     const model::Project project{context_.project, nullptr};
+    beatLines_ = ui::beatLines(context_.project);
     const auto rows =
         ui::trackRows(project, [this](const std::string& id) { return context_.recording.isArmed(id); });
     const auto inputs = ui::inputChoices(context_.inputNames());

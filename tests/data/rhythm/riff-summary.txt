@@ -1,0 +1,3 @@
+style riff
+chord_share 0.541666667
+grid 1:12 2:7 4:2 3:1

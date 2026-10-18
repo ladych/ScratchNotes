@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rhythm/RhythmAnalysis.h"
 #include "transcription/Note.h"
 #include "transcription/Transcriber.h"
 
@@ -31,6 +32,8 @@ struct TranscriptionOutcome
 
     Status status = Status::done;
     std::vector<transcription::Note> notes;
+    /// Onset strength of the DI file for the beat grid (F-TX-04).
+    rhythm::Onsets onsets;
 };
 
 /// Runs one transcription at a time away from the GUI thread; the GUI thread asks for progress and result.

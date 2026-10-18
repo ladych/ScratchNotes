@@ -1,0 +1,177 @@
+#include "ui/RhythmUpdate.h"
+
+#include "io/MockFileSystem.h"
+#include "model/ModelIds.h"
+#include "model/Project.h"
+#include "model/ProjectFactory.h"
+#include "rhythm/RhythmCsv.h"
+#include "rhythm/RhythmReference.h"
+#include "transcription/NoteCsv.h"
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+#include <cmath>
+#include <filesystem>
+#include <map>
+#include <optional>
+#include <string>
+
+namespace snotes::ui
+{
+namespace
+{
+
+namespace fs = std::filesystem;
+using ::testing::_;
+using ::testing::NiceMock;
+using ::testing::Return;
+
+/// A project folder in memory: the riff excerpt of the PoC as transcription of the bass.
+class RhythmUpdateTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        ON_CALL(fileSystem, readText(_))
+            .WillByDefault(
+                [this](const fs::path& file) -> std::optional<std::string>
+                {
+                    const auto found = files.find(file);
+                    if (found == files.end())
+                        return std::nullopt;
+                    return found->second;
+                });
+        ON_CALL(fileSystem, writeText(_, _))
+            .WillByDefault(
+                [this](const fs::path& file, const std::string& text)
+                {
+                    files[file] = text;
+                    return true;
+                });
+        auto bass = project.addVoice({.id = "v1", .name = "Bass", .profileId = "bass5-gs"});
+        bass.addTake({.id = "t1", .diFile = "audio/Bass Take 1 DI.wav"});
+        auto take = bass.addTake({.id = "t2",
+                                  .diFile = "audio/Bass Take 2 DI.wav",
+                                  .startSample = 48000,
+                                  .latencyOffsetSamples = 480});
+        take.setNotes("audio/Bass Take 2 DI.notes.csv", 105);
+        take.setOnsets("audio/Bass Take 2 DI.onsets.csv");
+        files[folder / "audio" / "Bass Take 2 DI.notes.csv"] =
+            transcription::notesToCsv(rhythm::test::readNotes("riff"));
+        files[folder / "audio" / "Bass Take 2 DI.onsets.csv"] =
+            rhythm::onsetsToCsv({.beat = rhythm::test::readFloats("riff-oenv441.f32"),
+                                 .detail = rhythm::test::readFloats("riff-oenv256.f32")});
+        project.addVoice({.id = "v2", .name = "Leer", .profileId = "guitar6-e"});
+        auto guitar = project.addVoice({.id = "v3", .name = "Gitarre", .profileId = "guitar6-e"});
+        guitar.addTake({.id = "t3", .diFile = "audio/Gitarre Take 1 DI.wav"});
+    }
+
+    fs::path folder = fs::path{"projects"} / "Probe";
+    juce::ValueTree tree = model::ProjectFactory::createDefault("Probe");
+    model::Project project{tree, nullptr};
+    NiceMock<io::MockFileSystem> fileSystem;
+    std::map<fs::path, std::string> files;
+};
+
+TEST_F(RhythmUpdateTest, FTX05_StoresTheGridInSongSamplesAndTheEventsOfTheTakes)
+{
+    project.voice(0).take(0).setEvents("audio/Bass Take 1 DI.events.csv", 3);
+
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+
+    const auto grid = project.beatGrid();
+    const auto expected = rhythm::test::readBeats("riff", true);
+    ASSERT_EQ(grid.beats().size(), expected.size());
+    // The take starts at one second, recorded 10 ms late; the tracker works in frames of 20 ms.
+    EXPECT_NEAR(static_cast<double>(grid.beats().front()),
+                (expected.front() + 0.99) * project.sampleRate(),
+                0.02 * project.sampleRate());
+    EXPECT_EQ(grid.meterReadings().size(), 5U);
+    EXPECT_EQ(grid.chosenMeter(), 4);
+    const auto take = project.voice(0).take(1);
+    EXPECT_EQ(take.eventsFile(), "audio/Bass Take 2 DI.events.csv");
+    EXPECT_EQ(take.eventCount(), 27);
+    EXPECT_TRUE(files.at(folder / "audio" / "Bass Take 2 DI.events.csv").starts_with("position,duration"));
+    // The events of the inactive take no longer fit the grid.
+    EXPECT_EQ(project.voice(0).take(0).eventsFile(), "");
+    EXPECT_EQ(beatGridSummary(tree), "Beat-Raster: 88 BPM, 4/4-Takt (68 %)");
+}
+
+TEST_F(RhythmUpdateTest, FTX05_NoGridWithoutReadableTranscriptions)
+{
+    project.beatGrid().setAnalysis({1, 2}, {{.numerator = 4, .confidence = 1.0, .phase = 0}});
+    files[folder / "audio" / "Bass Take 2 DI.onsets.csv"] = "kaputt";
+
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::noGrid);
+    EXPECT_TRUE(project.beatGrid().beats().empty());
+    EXPECT_EQ(beatGridSummary(tree), "");
+
+    files[folder / "audio" / "Bass Take 2 DI.notes.csv"] = "start,end,pitch,amplitude\nkaputt\n";
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::noGrid);
+    files.erase(folder / "audio" / "Bass Take 2 DI.notes.csv");
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::noGrid);
+}
+
+TEST_F(RhythmUpdateTest, FTX05_NoGridWithoutTheOnsetsFile)
+{
+    files.erase(folder / "audio" / "Bass Take 2 DI.onsets.csv");
+
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::noGrid);
+}
+
+TEST_F(RhythmUpdateTest, FTX05_TakesWithoutOnsetsAreLeftOut)
+{
+    auto take = project.voice(0).take(1).tree();
+    take.removeProperty(model::ids::onsetsFile, nullptr);
+    files.erase(folder / "audio" / "Bass Take 2 DI.onsets.csv");
+
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::noGrid);
+    EXPECT_CALL(fileSystem, readText(_)).Times(0);
+    project.voice(0).take(1).clearNotes();
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::noGrid);
+}
+
+TEST_F(RhythmUpdateTest, FTX09_ReportsEventsThatCannotBeWritten)
+{
+    EXPECT_CALL(fileSystem, writeText(_, _)).WillOnce(Return(false));
+
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::writeFailed);
+    EXPECT_EQ(project.voice(0).take(1).eventsFile(), "");
+}
+
+TEST_F(RhythmUpdateTest, FTX06_SummaryNeedsBeatsAndAMeter)
+{
+    project.beatGrid().setAnalysis({0, 24000, 48000}, {});
+    EXPECT_EQ(beatGridSummary(tree), "");
+    project.beatGrid().setAnalysis({0}, {{.numerator = 3, .confidence = 1.0, .phase = 0}});
+    EXPECT_EQ(beatGridSummary(tree), "");
+    project.beatGrid().setAnalysis({0, 24000, 48000}, {{.numerator = 3, .confidence = 0.5, .phase = 0}});
+    EXPECT_EQ(beatGridSummary(tree), "Beat-Raster: 120 BPM, 3/4-Takt (50 %)");
+}
+
+TEST_F(RhythmUpdateTest, FNA03_BeatLinesMarkTheFirstBeatOfEachBar)
+{
+    EXPECT_TRUE(beatLines(tree).empty());
+    project.beatGrid().setAnalysis({0, 24000, 48000, 72000},
+                                   {{.numerator = 3, .confidence = 0.5, .phase = 1}});
+
+    EXPECT_THAT(beatLines(tree),
+                ::testing::ElementsAre(BeatLine{.seconds = 0.0, .downbeat = false},
+                                       BeatLine{.seconds = 0.5, .downbeat = true},
+                                       BeatLine{.seconds = 1.0, .downbeat = false},
+                                       BeatLine{.seconds = 1.5, .downbeat = false}));
+    EXPECT_NE(BeatLine{.seconds = 0.5}, BeatLine{.seconds = 1.0});
+    EXPECT_NE((BeatLine{.seconds = 0.5, .downbeat = true}), (BeatLine{.seconds = 0.5, .downbeat = false}));
+
+    project.beatGrid().setAnalysis({0, 24000}, {});
+    EXPECT_FALSE(beatLines(tree)[0].downbeat);
+}
+
+TEST(RhythmFilesTest, FTX09_FilesNextToTheDiFile)
+{
+    EXPECT_EQ(fileNextTo("audio/Bass Take 1 DI.wav", "events.csv"), "audio/Bass Take 1 DI.events.csv");
+}
+
+} // namespace
+} // namespace snotes::ui

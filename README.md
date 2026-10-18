@@ -45,9 +45,14 @@ Beim ersten Start wählt das Programm ASIO, falls ein ASIO-Treiber mit Eingänge
 ```bash
 scratchnotes-transcribe --profile bass5-gs --out ergebnisse "Bass Take 1 DI.wav"
 # schreibt ergebnisse/Bass Take 1 DI.notes.csv und .mid; --help nennt die Instrumentprofile
+scratchnotes-transcribe --out ergebnisse "Gitarre Take 1 DI.wav" "Bass Take 1 DI.wav"
+# gemeinsames Beat-Raster: Gitarre Take 1 DI.beats.csv und .meter.csv, je Stimme .events.csv
+# --separate rechnet für jede Datei ein eigenes Raster
 ```
 
-`tools/export-basic-pitch-reference.py` erzeugt die Python-Referenzwerte in `tests/data/transcription/`, mit denen die Tests die C++-Portierung prüfen (E-12).
+**Rhythmus:** Sobald keine Tonerkennung mehr läuft, rechnet das Programm aus den aktiven Takes aller Stimmen ein gemeinsames Beat-Raster (Tempo, Taktart mit Konfidenz, Taktanfang), räumt die Noten auf (Anschläge zusammenfassen, Nachklingen und Vorschläge erkennen, Riff oder Melodie) und quantisiert sie auf Achtel, Sechzehntel oder Triolen. Die Spuren zeigen die Schläge als Linien, Taktanfänge kräftiger; die Statusleiste nennt Tempo und Taktart. Die Ereignisse liegen als `<DI-Datei>.events.csv` neben der Aufnahme.
+
+`tools/export-basic-pitch-reference.py` und `tools/export-rhythm-reference.py` erzeugen die Python-Referenzwerte in `tests/data/transcription/` und `tests/data/rhythm/`, mit denen die Tests die C++-Portierung prüfen (E-12). `tools/evaluate-transcription.py <CLI> <Aufnahmen> <Ausgabe>` misst Q-06/Q-07 an den PoC-Aufnahmen und schreibt `metrics.json`.
 
 CLion liest `CMakePresets.json` direkt; die Presets `coverage`, `asan` und `tsan` bauen nur die Tests.
 

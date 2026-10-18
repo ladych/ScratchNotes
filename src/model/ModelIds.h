@@ -14,6 +14,7 @@ inline const juce::Identifier voice{"VOICE"};
 inline const juce::Identifier takes{"TAKES"};
 inline const juce::Identifier take{"TAKE"};
 inline const juce::Identifier beatGrid{"BEAT_GRID"};
+inline const juce::Identifier meterReading{"METER_READING"};
 inline const juce::Identifier mix{"MIX"};
 
 // Properties
@@ -36,6 +37,16 @@ inline const juce::Identifier latencyOffsetSamples{"latencyOffsetSamples"};
 inline const juce::Identifier recordedAt{"recordedAt"};
 inline const juce::Identifier notesFile{"notesFile"};
 inline const juce::Identifier noteCount{"noteCount"};
+inline const juce::Identifier onsetsFile{"onsetsFile"};
+inline const juce::Identifier eventsFile{"eventsFile"};
+inline const juce::Identifier eventCount{"eventCount"};
+inline const juce::Identifier beats{"beats"};
+inline const juce::Identifier downbeatPhase{"downbeatPhase"};
+inline const juce::Identifier source{"source"};
+inline const juce::Identifier chosenMeter{"chosenMeter"};
+inline const juce::Identifier numerator{"numerator"};
+inline const juce::Identifier confidence{"confidence"};
+inline const juce::Identifier phase{"phase"};
 inline const juce::Identifier masterGain{"masterGain"};
 inline const juce::Identifier click{"click"};
 inline const juce::Identifier clickBpm{"clickBpm"};

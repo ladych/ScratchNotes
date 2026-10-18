@@ -26,7 +26,9 @@ struct TranscriptionEnvironment
 
 /// Presenter for the transcription in the background (F-TX-01): takes are queued and handed to the worker
 /// one after the other, after recording or by command. The notes of a take go next to its DI file as
-/// "<DI file name>.notes.csv"; the take remembers the file and the number of notes.
+/// "<DI file name>.notes.csv", its onsets as "<DI file name>.onsets.csv"; the take remembers the files and
+/// the number of notes. When the queue is done, the common beat grid and the events are updated
+/// (ui::updateRhythm).
 class TranscriptionController
 {
 public:
@@ -57,7 +59,8 @@ private:
 
     void enqueue(const std::string& takeId);
     void startNext();
-    void store(const std::string& takeId, const std::vector<transcription::Note>& notes);
+    void store(const std::string& takeId, const TranscriptionOutcome& outcome);
+    void updateRhythmWhenDone();
     [[nodiscard]] std::optional<TranscriptionJob> jobFor(const std::string& takeId) const;
     [[nodiscard]] std::optional<Located> locate(const std::string& takeId) const;
     [[nodiscard]] model::Voice voiceAt(Located located) const;
@@ -70,6 +73,8 @@ private:
     TranscriptionEnvironment environment_;
     std::deque<std::string> queue_;
     std::optional<std::string> running_;
+    /// A take got new notes since the last update of the beat grid.
+    bool rhythmPending_ = false;
 };
 
 /// Notes file of a DI file: "audio/Bass Take 1 DI.wav" becomes "audio/Bass Take 1 DI.notes.csv".

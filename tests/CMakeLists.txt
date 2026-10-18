@@ -22,12 +22,21 @@ add_executable(snotes_tests
     io/StdFileSystemTest.cpp
     io/TakeFileWriterTest.cpp
     io/WavWriterTest.cpp
+    model/BeatGridTest.cpp
     model/InstrumentProfileTest.cpp
     model/ProjectTest.cpp
     model/SnapshotBuilderTest.cpp
     model/TreeChangeListenerTest.cpp
     model/UuidGeneratorTest.cpp
     notation/ScoreRendererTest.cpp
+    rhythm/BeatTrackerTest.cpp
+    rhythm/CleanUpTest.cpp
+    rhythm/MeterTest.cpp
+    rhythm/OnsetStrengthTest.cpp
+    rhythm/QuantizerTest.cpp
+    rhythm/RhythmAnalysisTest.cpp
+    rhythm/RhythmCsvTest.cpp
+    rhythm/RhythmReference.cpp
     transcription/CommandLineTest.cpp
     transcription/LevelGateTest.cpp
     transcription/NoteCreationTest.cpp
@@ -44,6 +53,7 @@ add_executable(snotes_tests
     ui/LatencyCompensationTest.cpp
     ui/LevelMeterTest.cpp
     ui/RecordingControllerTest.cpp
+    ui/RhythmUpdateTest.cpp
     ui/TakeAudioCacheTest.cpp
     ui/ThemeSettingTest.cpp
     ui/TrackListTest.cpp

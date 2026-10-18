@@ -18,9 +18,12 @@ ParsedCommandLine failure(const std::string& message)
 
 std::string commandLineUsage()
 {
-    std::string usage = "Usage: scratchnotes-transcribe [--profile ID] [--out FOLDER] RECORDING...\n"
-                        "Detects the notes of DI recordings and writes <name>.notes.csv and <name>.mid.\n"
-                        "Profiles:\n";
+    std::string usage =
+        "Usage: scratchnotes-transcribe [--profile ID] [--out FOLDER] [--separate] RECORDING...\n"
+        "Detects the notes of DI recordings and writes <name>.notes.csv and <name>.mid, the rhythm of each\n"
+        "voice to <name>.events.csv and the beat grid and meter of all of them, as voices of one piece, to\n"
+        "<first name>.beats.csv and <first name>.meter.csv. --separate gives each recording its own grid.\n"
+        "Profiles:\n";
     for (const auto& profile : model::instrumentProfiles())
     {
         usage += "  ";
@@ -45,6 +48,8 @@ ParsedCommandLine parseCommandLine(const std::vector<std::string>& arguments)
             options.profileId = arguments[++index];
         else if (argument == "--out")
             options.outputFolder = arguments[++index];
+        else if (argument == "--separate")
+            options.separateGrids = true;
         else if (argument.starts_with("--"))
             return failure("Unknown option " + argument);
         else

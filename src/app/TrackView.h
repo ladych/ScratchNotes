@@ -4,6 +4,7 @@
 #include "model/TreeChangeListener.h"
 #include "ui/LevelMeter.h"
 #include "ui/RecordingController.h"
+#include "ui/RhythmUpdate.h"
 #include "ui/TrackList.h"
 #include "ui/TranscriptionController.h"
 #include "ui/TransportControl.h"
@@ -68,6 +69,8 @@ public:
     /// Seconds from the song start shown across the waveforms.
     [[nodiscard]] double visibleSeconds() const { return visibleSeconds_; }
     [[nodiscard]] double positionSeconds() const { return context_.transport.positionSeconds(); }
+    /// The common beat grid drawn behind the waveforms (F-NA-03).
+    [[nodiscard]] const std::vector<ui::BeatLine>& beatLines() const { return beatLines_; }
 
 private:
     void timerCallback() override;
@@ -78,6 +81,7 @@ private:
     juce::AudioFormatManager formats_;
     juce::AudioThumbnailCache thumbnails_;
     std::array<ui::LevelMeter, engine::InputMeter::kMaxInputs> levels_{};
+    std::vector<ui::BeatLine> beatLines_;
     juce::Viewport viewport_;
     juce::Component content_;
     juce::Label empty_;

@@ -4,6 +4,7 @@
 #include "model/ModelIds.h"
 #include "model/Project.h"
 
+#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
@@ -49,9 +50,14 @@ std::vector<juce::ValueTree> transcribedTakes(const juce::ValueTree& project)
     return takes;
 }
 
-std::filesystem::path notesPath(const std::filesystem::path& folder, const juce::ValueTree& take)
+/// The files of the transcription of a take: notes, onsets and events (F-TX-01, F-TX-04, F-TX-09).
+std::vector<std::filesystem::path> transcriptionFiles(const juce::ValueTree& take)
 {
-    return folder / pathFromUtf8(take[ids::notesFile].toString().toStdString());
+    std::vector<std::filesystem::path> files;
+    for (const auto* property : {&ids::notesFile, &ids::onsetsFile, &ids::eventsFile})
+        if (take.hasProperty(*property))
+            files.push_back(pathFromUtf8(take[*property].toString().toStdString()));
+    return files;
 }
 
 } // namespace
@@ -79,7 +85,8 @@ LoadResult ProjectRepository::load(const std::filesystem::path& folder)
     }
     // A lost transcription is not reported; the take is transcribed again.
     for (const auto& take : transcribedTakes(parsed.project))
-        if (!fileSystem_.exists(notesPath(folder, take)))
+        if (std::ranges::any_of(transcriptionFiles(take),
+                                [&](const auto& file) { return !fileSystem_.exists(folder / file); }))
             model::Take{take, nullptr}.clearNotes();
     return {parsed.project, ProjectFileError::none, std::move(missing)};
 }
@@ -117,13 +124,13 @@ ProjectFileError ProjectRepository::saveCopy(const juce::ValueTree& project,
             return ProjectFileError::writeFailed;
     }
     for (const auto& take : transcribedTakes(project))
-    {
-        const auto source = notesPath(from, take);
-        if (!fileSystem_.exists(source))
-            continue;
-        if (!fileSystem_.copyFile(source, notesPath(to, take)))
-            return ProjectFileError::writeFailed;
-    }
+        for (const auto& file : transcriptionFiles(take))
+        {
+            if (!fileSystem_.exists(from / file))
+                continue;
+            if (!fileSystem_.copyFile(from / file, to / file))
+                return ProjectFileError::writeFailed;
+        }
     return save(project, to);
 }
 

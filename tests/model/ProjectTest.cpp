@@ -225,6 +225,35 @@ TEST_F(ProjectTest, FTX01_TakesRememberTheirNotesWithoutUndo)
     EXPECT_FALSE(take.tree().hasProperty(ids::noteCount));
 }
 
+TEST_F(ProjectTest, FTX09_TakesRememberOnsetsAndEventsWithTheirNotes)
+{
+    auto voice = addGuitar();
+    auto take = voice.addTake(takeData("t1"));
+    EXPECT_EQ(take.onsetsFile(), "");
+    EXPECT_EQ(take.eventsFile(), "");
+    EXPECT_EQ(take.eventCount(), 0);
+    undoManager.clearUndoHistory();
+
+    take.setNotes("audio/t1.notes.csv", 42);
+    take.setOnsets("audio/t1.onsets.csv");
+    take.setEvents("audio/t1.events.csv", 17);
+
+    EXPECT_EQ(take.onsetsFile(), "audio/t1.onsets.csv");
+    EXPECT_EQ(take.eventsFile(), "audio/t1.events.csv");
+    EXPECT_EQ(take.eventCount(), 17);
+    EXPECT_FALSE(undoManager.canUndo());
+
+    take.clearEvents();
+    EXPECT_EQ(take.eventsFile(), "");
+    EXPECT_FALSE(take.tree().hasProperty(ids::eventCount));
+    EXPECT_EQ(take.onsetsFile(), "audio/t1.onsets.csv");
+
+    take.setEvents("audio/t1.events.csv", 17);
+    take.clearNotes();
+    EXPECT_FALSE(take.tree().hasProperty(ids::onsetsFile));
+    EXPECT_FALSE(take.tree().hasProperty(ids::eventsFile));
+}
+
 TEST_F(ProjectTest, FAU04_MovesTakes)
 {
     auto voice = addGuitar();
