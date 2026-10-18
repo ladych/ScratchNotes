@@ -42,12 +42,15 @@ void fillTakes(TrackRow& row, const model::Voice& voice, double sampleRate)
             label += i18n::tr(" (missing)");
         row.takes.push_back(std::move(label));
     }
+    row.diCaption = i18n::tr("DI");
     row.activeTake = voice.activeTakeIndex();
     if (row.activeTake >= 0)
     {
         const auto active = voice.take(row.activeTake);
         row.diFile = active.diFile();
         row.wetFile = active.wetFile();
+        if (active.hasNotes())
+            row.diCaption += i18n::tr(" · %1 notes", std::to_string(active.noteCount()));
         row.takeStartSeconds =
             static_cast<double>(active.startSample() - active.latencyOffsetSamples()) / sampleRate;
     }

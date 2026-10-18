@@ -71,6 +71,14 @@ public:
         repaint();
     }
 
+    void setCaption(const juce::String& caption)
+    {
+        if (caption == caption_)
+            return;
+        caption_ = caption;
+        repaint();
+    }
+
     void paint(juce::Graphics& g) override
     {
         g.setColour(theme::colours().gap);
@@ -176,7 +184,7 @@ class TrackRowComponent final : public juce::Component
 public:
     explicit TrackRowComponent(TrackView& view)
         : view_(view), diMeter_(view), wetMeter_(view), wetLane_(view, i18n::trJuce("processed")),
-          diLane_(view, i18n::trJuce("DI"))
+          diLane_(view, {})
     {
         setUpHeader();
         setUpButtons();
@@ -227,6 +235,7 @@ public:
             gain_.setValue(row.gain, juce::dontSendNotification);
         diMeter_.setInput(row.diChoice - 1);
         wetMeter_.setInput(row.wetChoice - 1);
+        diLane_.setCaption(fromUtf8(row.diCaption));
         diLane_.show(fileOf(folder, row.diFile), colour, row.takeStartSeconds);
         wetLane_.show(fileOf(folder, row.wetFile), colour, row.takeStartSeconds);
         repaint();

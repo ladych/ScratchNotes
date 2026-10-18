@@ -144,9 +144,11 @@ void MainComponent::timerCallback()
     transcription_.poll();
     showTransportState();
     showClick();
-    auto status = ui::audioStatusText(describeDevice(deviceManager_, deviceSupervisor_));
-    if (const auto notes = transcription_.statusText(); !notes.empty())
-        status += "   ·   " + notes;
+    // The note detection comes first, so it is seen next to a long audio status.
+    auto status = transcription_.statusText();
+    if (!status.empty())
+        status += "   ·   ";
+    status += ui::audioStatusText(describeDevice(deviceManager_, deviceSupervisor_));
     status_.setText(juce::String::fromUTF8(status.c_str()), juce::dontSendNotification);
 }
 

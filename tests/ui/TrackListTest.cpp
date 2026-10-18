@@ -124,6 +124,8 @@ TEST_F(TrackListTest, FTX01_TranscribedTakesShowTheirNoteCount)
     project.voice(0).take(1).setNotes("audio/t2.notes.csv", 42);
 
     EXPECT_EQ(rows()[0].takes[1], "Take 2 · 09:45 · 42 Noten");
+    EXPECT_EQ(rows()[0].diCaption, "DI · 42 Noten");
+    EXPECT_EQ(rows()[1].diCaption, "DI");
 }
 
 TEST_F(TrackListTest, FAU04_ShortRecordingTimeIsShownAsIs)
