@@ -28,6 +28,9 @@ struct InstrumentProfile
     std::vector<int> strings;
     int frets = 0;
     Clef clef = Clef::treble8vb;
+    /// The note detection hears this instrument an octave higher, because the model starts at A0 and is
+    /// weak near its lower edge (F-TX-03).
+    bool transcribeOctaveUp = false;
 };
 
 /// The profiles of the MVP (Lastenheft 7, decided 15.10.2026): guitar 6 in E standard, guitar 7 in

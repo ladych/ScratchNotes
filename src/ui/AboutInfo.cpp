@@ -103,6 +103,18 @@ ThirdPartyComponent onnxRuntime()
             .notice = "Copyright (c) Microsoft Corporation."};
 }
 
+/// The neural network of the note detection (F-TX-02), built into the program.
+ThirdPartyComponent basicPitch()
+{
+    return {.name = "Basic Pitch 0.4",
+            .author = "Spotify AB",
+            .usage = i18n::tr("Neural network of the note detection"),
+            .license = "Apache License 2.0",
+            .website = {"basicpitch.spotify.com", "https://basicpitch.spotify.com"},
+            .licenseText = {"Apache 2.0", "https://www.apache.org/licenses/LICENSE-2.0"},
+            .notice = "Copyright 2022 Spotify AB."};
+}
+
 /// Draws notes and tablature (F-NA-01). LGPLv3: linked statically, so the source code of the whole program
 /// is public (AGPLv3), which lets anyone relink it with a changed Verovio.
 ThirdPartyComponent verovio()
@@ -135,6 +147,7 @@ AboutInfo makeAboutInfo(std::string_view version, bool withAsio)
     if (withAsio)
         info.components.push_back(asioSdk());
     info.components.push_back(onnxRuntime());
+    info.components.push_back(basicPitch());
     info.components.push_back(verovio());
     return info;
 }

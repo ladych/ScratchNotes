@@ -33,6 +33,9 @@ struct TrackRow
     /// Files of the active take relative to the project folder; empty without take or signal.
     std::string diFile;
     std::string wetFile;
+    /// Caption of the DI waveform, with the number of notes once they are detected (F-TX-01), e.g.
+    /// "DI · 42 notes".
+    std::string diCaption;
     /// Song time in seconds at which the active take plays, after latency compensation (F-WI-05).
     double takeStartSeconds = 0.0;
 };

@@ -71,6 +71,33 @@ bool Take::isAudioMissing() const
     return static_cast<bool>(tree().getProperty(ids::audioMissing, false));
 }
 
+std::string Take::notesFile() const
+{
+    return getString(ids::notesFile);
+}
+
+int Take::noteCount() const
+{
+    return getInt(ids::noteCount, 0);
+}
+
+bool Take::hasNotes() const
+{
+    return tree().hasProperty(ids::notesFile);
+}
+
+void Take::setNotes(const std::string& file, int count)
+{
+    mutableTree().setProperty(ids::notesFile, juce::String::fromUTF8(file.c_str()), nullptr);
+    mutableTree().setProperty(ids::noteCount, count, nullptr);
+}
+
+void Take::clearNotes()
+{
+    mutableTree().removeProperty(ids::notesFile, nullptr);
+    mutableTree().removeProperty(ids::noteCount, nullptr);
+}
+
 void Take::setStartSample(std::int64_t startSample)
 {
     set(ids::startSample, static_cast<juce::int64>(startSample));
@@ -204,6 +231,12 @@ int Voice::activeTakeIndex() const
 {
     const auto takes = tree().getChildWithName(ids::takes);
     return takes.indexOf(takes.getChildWithProperty(ids::id, tree()[ids::activeTakeId]));
+}
+
+int Voice::takeIndex(const std::string& id) const
+{
+    const auto takes = tree().getChildWithName(ids::takes);
+    return takes.indexOf(takes.getChildWithProperty(ids::id, toJuce(id)));
 }
 
 Take Voice::addTake(const TakeData& data)

@@ -40,6 +40,15 @@ ctest --preset debug
 
 Beim ersten Start wählt das Programm ASIO, falls ein ASIO-Treiber mit Eingängen installiert ist, sonst WASAPI. Unter Linux nimmt es JACK, wenn ein JACK-Server läuft (auch das JACK von PipeWire), sonst ALSA; das ALSA-Gerät „default“ öffnet sich oft erst ab 512 Samples Buffer. Fällt das gewählte Gerät aus (z. B. Interface abgezogen), läuft es über den nächsten Treiber weiter und kehrt zum gewählten Gerät zurück, sobald es wieder da ist; die Statusleiste zeigt das an. **Audio → Audio-Einstellungen...** (Strg+,) wählt Treiber, Gerät, Samplerate, Buffer und die aktiven Ein- und Ausgänge.
 
+**Tonerkennung:** Nach jeder Aufnahme erkennt das Programm im Hintergrund die Noten der neuen Takes aus der DI-Spur (Basic Pitch, eingebaut); **Noten → Noten erkennen** (Strg+Umschalt+T) erkennt die aktiven Takes neu, die Statusleiste zeigt den Fortschritt. Die Noten liegen als `<DI-Datei>.notes.csv` neben der Aufnahme. Ohne Programm geht das mit dem Kommandozeilen-Werkzeug, das neben dem Programm gebaut wird:
+
+```bash
+scratchnotes-transcribe --profile bass5-gs --out ergebnisse "Bass Take 1 DI.wav"
+# schreibt ergebnisse/Bass Take 1 DI.notes.csv und .mid; --help nennt die Instrumentprofile
+```
+
+`tools/export-basic-pitch-reference.py` erzeugt die Python-Referenzwerte in `tests/data/transcription/`, mit denen die Tests die C++-Portierung prüfen (E-12).
+
 CLion liest `CMakePresets.json` direkt; die Presets `coverage`, `asan` und `tsan` bauen nur die Tests.
 
 ## Qualitätsregeln
@@ -64,4 +73,4 @@ Im Code stehen alle Texte englisch in `i18n::tr("...")` (oder `i18n::marked("...
 
 GNU Affero General Public License v3.0, siehe [LICENSE](LICENSE). Die Lizenz folgt aus der Open-Source-Lizenz von JUCE.
 
-Verovio steht unter LGPLv3, ONNX Runtime unter MIT. Alle Komponenten von Drittanbietern mit ihren Lizenzen zeigt das Programm unter **Hilfe → Info und Lizenzen...**.
+Verovio steht unter LGPLv3, ONNX Runtime unter MIT, das Modell von Basic Pitch unter Apache 2.0 (`resources/Models/LICENSE`). Alle Komponenten von Drittanbietern mit ihren Lizenzen zeigt das Programm unter **Hilfe → Info und Lizenzen...**.

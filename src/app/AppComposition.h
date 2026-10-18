@@ -6,6 +6,7 @@
 #include "app/JuceTakeAudioLoader.h"
 #include "app/MainMenu.h"
 #include "app/Theme.h"
+#include "app/TranscriptionThread.h"
 #include "app/WriterThread.h"
 #include "engine/InputMeter.h"
 #include "engine/LatencyProbe.h"
@@ -25,6 +26,7 @@
 #include "ui/TakeAudioCache.h"
 #include "ui/ThemeSetting.h"
 #include "ui/TrackList.h"
+#include "ui/TranscriptionController.h"
 #include "ui/TransportControl.h"
 
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -97,6 +99,9 @@ private:
     io::SettingsStore lastProjectSettings_;
     JuceDocumentView documentView_;
     ui::DocumentController document_;
+    // Note detection (AP4): one take after the other on its own thread.
+    TranscriptionThread transcriptionThread_;
+    ui::TranscriptionController transcription_;
     // Recording (AP2): the audio thread fills the session's rings, the writer thread writes the files.
     engine::InputMeter inputMeter_;
     engine::Recorder recorder_;

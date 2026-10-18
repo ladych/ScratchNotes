@@ -28,7 +28,15 @@ add_executable(snotes_tests
     model/TreeChangeListenerTest.cpp
     model/UuidGeneratorTest.cpp
     notation/ScoreRendererTest.cpp
+    transcription/CommandLineTest.cpp
+    transcription/LevelGateTest.cpp
+    transcription/NoteCreationTest.cpp
+    transcription/NoteMidiTest.cpp
     transcription/OnnxRuntimeTest.cpp
+    transcription/PitchAnalysisTest.cpp
+    transcription/ReferenceData.cpp
+    transcription/ResamplerTest.cpp
+    transcription/TranscriberTest.cpp
     ui/AboutInfoTest.cpp
     ui/AudioStatusTest.cpp
     ui/DocumentControllerTest.cpp
@@ -39,6 +47,7 @@ add_executable(snotes_tests
     ui/TakeAudioCacheTest.cpp
     ui/ThemeSettingTest.cpp
     ui/TrackListTest.cpp
+    ui/TranscriptionControllerTest.cpp
     ui/TransportControlTest.cpp
     ui/VoiceListTest.cpp
 )
@@ -55,12 +64,15 @@ target_include_directories(snotes_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 # Verovio reads its fonts from its own resource directory in the submodule.
 target_compile_definitions(snotes_tests PRIVATE
     SNOTES_LANGUAGES_DIR="${PROJECT_SOURCE_DIR}/resources/Languages"
-    SNOTES_VEROVIO_DATA_DIR="${SNOTES_VEROVIO_DIR}/data")
+    SNOTES_VEROVIO_DATA_DIR="${SNOTES_VEROVIO_DIR}/data"
+    SNOTES_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
+    SNOTES_MODEL_FILE="${PROJECT_SOURCE_DIR}/resources/Models/basic-pitch.onnx")
 snotes_enable_warnings(snotes_tests)
 snotes_copy_onnxruntime(snotes_tests)
 
 include(GoogleTest)
-gtest_discover_tests(snotes_tests DISCOVERY_MODE PRE_TEST)
+gtest_discover_tests(snotes_tests DISCOVERY_MODE PRE_TEST
+    PROPERTIES ENVIRONMENT "TSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/tsan-suppressions.txt")
 
 # Every language file translates every text of the program.
 find_package(Python3 COMPONENTS Interpreter)

@@ -203,6 +203,28 @@ TEST_F(ProjectTest, FAU04_TakeWithoutProcessedSignalHasNoWetFile)
     EXPECT_FALSE(take.tree().hasProperty(ids::wetFile));
 }
 
+TEST_F(ProjectTest, FTX01_TakesRememberTheirNotesWithoutUndo)
+{
+    auto voice = addGuitar();
+    auto take = voice.addTake(takeData("t1"));
+    EXPECT_EQ(take.notesFile(), "");
+    EXPECT_EQ(take.noteCount(), 0);
+    EXPECT_FALSE(take.hasNotes());
+    undoManager.clearUndoHistory();
+
+    take.setNotes("audio/Stimme 1 Take 1 DI.notes.csv", 42);
+
+    EXPECT_EQ(take.notesFile(), "audio/Stimme 1 Take 1 DI.notes.csv");
+    EXPECT_EQ(take.noteCount(), 42);
+    EXPECT_TRUE(take.hasNotes());
+    EXPECT_FALSE(undoManager.canUndo());
+
+    take.clearNotes();
+
+    EXPECT_FALSE(take.tree().hasProperty(ids::notesFile));
+    EXPECT_FALSE(take.tree().hasProperty(ids::noteCount));
+}
+
 TEST_F(ProjectTest, FAU04_MovesTakes)
 {
     auto voice = addGuitar();
@@ -213,6 +235,16 @@ TEST_F(ProjectTest, FAU04_MovesTakes)
 
     EXPECT_EQ(take.startSample(), 1000);
     EXPECT_EQ(take.latencyOffsetSamples(), -12);
+}
+
+TEST_F(ProjectTest, FAU04_FindsTheIndexOfATake)
+{
+    auto voice = addGuitar();
+    voice.addTake(takeData("t1"));
+    voice.addTake(takeData("t2"));
+
+    EXPECT_EQ(voice.takeIndex("t2"), 1);
+    EXPECT_EQ(voice.takeIndex("t9"), -1);
 }
 
 TEST_F(ProjectTest, FAU04_KnowsTheIndexOfTheActiveTake)

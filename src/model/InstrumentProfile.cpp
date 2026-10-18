@@ -28,12 +28,14 @@ const std::vector<InstrumentProfile> kProfiles{
      .name = i18n::marked("Bass 4 strings, E standard"),
      .strings = {28, 33, 38, 43},
      .frets = kBassFrets,
-     .clef = Clef::bass8vb},
+     .clef = Clef::bass8vb,
+     .transcribeOctaveUp = true},
     {.id = "bass5-gs",
      .name = i18n::marked("Bass 5 strings, G# standard"),
      .strings = {20, 25, 30, 35, 40},
      .frets = kBassFrets,
-     .clef = Clef::bass8vb},
+     .clef = Clef::bass8vb,
+     .transcribeOctaveUp = true},
 };
 
 } // namespace

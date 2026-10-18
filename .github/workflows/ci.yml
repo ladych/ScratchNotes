@@ -128,8 +128,8 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-      # Generated header of the translations (LanguageData.h, included by src/app/AppComposition.cpp).
+      # Generated headers of the translations (LanguageData.h) and the Basic Pitch model (ModelData.h).
       - name: Generate sources
-        run: cmake --build build --target ScratchNotesLanguages
+        run: cmake --build build --target ScratchNotesLanguages ScratchNotesModel
       - name: Run clang-tidy
         run: tools/run-clang-tidy.sh build
