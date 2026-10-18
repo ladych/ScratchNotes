@@ -34,13 +34,16 @@ TEST(AboutInfoTest, Q12_ShowsVersionOwnLicenseSourceCodeAndClaude)
     EXPECT_THAT(info.lines.back(), HasSubstr("Claude"));
 }
 
-TEST(AboutInfoTest, Q12_NamesJuceOnnxRuntimeAndVerovioWithTheirLicenses)
+TEST(AboutInfoTest, Q12_NamesJuceOnnxRuntimeBasicPitchAndVerovioWithTheirLicenses)
 {
     const auto info = makeAboutInfo("0.1.0", false);
 
     EXPECT_NE(find(info, "JUCE"), nullptr);
     EXPECT_EQ(find(info, "ONNX Runtime")->licenseText.text, "MIT");
     EXPECT_THAT(find(info, "ONNX Runtime")->notice, HasSubstr("Microsoft"));
+    ASSERT_NE(find(info, "Basic Pitch"), nullptr);
+    EXPECT_EQ(find(info, "Basic Pitch")->licenseText.text, "Apache 2.0");
+    EXPECT_THAT(find(info, "Basic Pitch")->notice, HasSubstr("Spotify"));
     EXPECT_EQ(find(info, "Verovio")->licenseText.text, "LGPLv3");
     EXPECT_NE(find(info, "IJG")->notice, "");
 }

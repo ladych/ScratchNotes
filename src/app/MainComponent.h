@@ -16,8 +16,8 @@ namespace snotes::app
 
 /// Humble object (E-03): the main window. A top bar with "+" (add a voice), the transport (back to the
 /// start, Play/Stop, Rec, position) and the click with its tempo; the track view (AP2) and the status line
-/// with driver, buffer and latency (Q-02). Test tone, audio settings and latency compensation are in the
-/// menu.
+/// with driver, buffer and latency (Q-02) and the progress of the note detection (F-TX-01). Test tone, audio
+/// settings and latency compensation are in the menu.
 class MainComponent final : public juce::Component, private juce::ChangeListener, private juce::Timer
 {
 public:
@@ -53,6 +53,7 @@ private:
     juce::TextButton clickButton_;
     juce::Slider clickTempo_;
     ui::RecordingController& recording_;
+    ui::TranscriptionController& transcription_;
     ui::TransportControl& transport_;
     ui::TrackEditor& editor_;
     juce::ValueTree project_;

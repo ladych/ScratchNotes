@@ -41,9 +41,16 @@ public:
     [[nodiscard]] std::string recordedAt() const;
     /// True if one of its audio files was missing when the project was loaded (F-PJ-03).
     [[nodiscard]] bool isAudioMissing() const;
+    /// Notes detected in the DI file (F-TX-01), relative to the project folder; empty before transcription.
+    [[nodiscard]] std::string notesFile() const;
+    [[nodiscard]] int noteCount() const;
+    [[nodiscard]] bool hasNotes() const;
 
     void setStartSample(std::int64_t startSample);
     void setLatencyOffsetSamples(std::int64_t latencyOffsetSamples);
+    /// Stores the result of a transcription. Not undoable: the file stays written either way.
+    void setNotes(const std::string& file, int count);
+    void clearNotes();
 };
 
 struct VoiceData
@@ -91,6 +98,8 @@ public:
     [[nodiscard]] std::optional<Take> activeTake() const;
     /// Index of activeTake(), -1 if there is none.
     [[nodiscard]] int activeTakeIndex() const;
+    /// Index of the take with this id, -1 if the voice has none.
+    [[nodiscard]] int takeIndex(const std::string& id) const;
     /// The new take becomes the active one.
     Take addTake(const TakeData& data);
     /// If the active take is removed, the last remaining take becomes active.

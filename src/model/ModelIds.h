@@ -34,6 +34,8 @@ inline const juce::Identifier wetFile{"wetFile"};
 inline const juce::Identifier startSample{"startSample"};
 inline const juce::Identifier latencyOffsetSamples{"latencyOffsetSamples"};
 inline const juce::Identifier recordedAt{"recordedAt"};
+inline const juce::Identifier notesFile{"notesFile"};
+inline const juce::Identifier noteCount{"noteCount"};
 inline const juce::Identifier masterGain{"masterGain"};
 inline const juce::Identifier click{"click"};
 inline const juce::Identifier clickBpm{"clickBpm"};

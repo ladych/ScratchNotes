@@ -1,6 +1,7 @@
 #include "app/AppComposition.h"
 
 #include "LanguageData.h"
+#include "ModelData.h"
 
 #include "app/Dialogs.h"
 #include "app/MainComponent.h"
@@ -73,6 +74,15 @@ i18n::LanguageCatalog appliedLanguages(const io::SettingsStore& settings)
     return catalog;
 }
 
+void showWarning(const std::string& title, const std::string& message)
+{
+    juce::AlertWindow::showAsync(
+        juce::MessageBoxOptions::makeOptionsOk(juce::MessageBoxIconType::WarningIcon,
+                                               juce::String::fromUTF8(title.c_str()),
+                                               juce::String::fromUTF8(message.c_str())),
+        nullptr);
+}
+
 } // namespace
 
 AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<void()> quit)
@@ -100,6 +110,12 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .timestamp = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%d %H-%M").toStdString(); },
            .rememberFolder = [this](const std::filesystem::path& folder)
            { lastProjectSettings_.save(io::utf8FromPath(folder)); }}),
+      transcriptionThread_(ModelData::basicpitch_onnx, ModelData::basicpitch_onnxSize),
+      transcription_(
+          project_,
+          fileSystem_,
+          transcriptionThread_,
+          {.projectFolder = [this] { return document_.currentFolder(); }, .showMessage = showWarning}),
       latencySettings_(fileSystem_, settingsFile("latency-offset.txt")), latency_(latencySettings_),
       trackEditor_(model::Project{project_, &undoManager_}),
       recording_(
@@ -115,15 +131,9 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .deviceSampleRate = [this] { return deviceSampleRate(); },
            .latencySamples = [this] { return latency_.samples(deviceInfo()); },
            .now = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%dT%H:%M:%S").toStdString(); },
-           .showMessage =
-               [](const std::string& title, const std::string& message)
-           {
-               juce::AlertWindow::showAsync(
-                   juce::MessageBoxOptions::makeOptionsOk(juce::MessageBoxIconType::WarningIcon,
-                                                          juce::String::fromUTF8(title.c_str()),
-                                                          juce::String::fromUTF8(message.c_str())),
-                   nullptr);
-           }}),
+           .showMessage = showWarning,
+           .takesRecorded = [this](const std::vector<std::string>& takeIds)
+           { transcription_.transcribeNew(takeIds); }}),
       transportControl_(
           transport_,
           {.sampleRate = [this] { return deviceSampleRate(); },
@@ -161,6 +171,9 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .toggleTestTone = [this] { testTone_.setEnabled(!testTone_.isEnabled()); },
            .testToneOn = [this] { return testTone_.isEnabled(); },
            .showLatency = [this] { showLatency(); }},
+          {.transcribe = [this] { transcription_.transcribeActiveTakes(); },
+           .cancel = [this] { transcription_.cancel(); },
+           .running = [this] { return transcription_.isRunning(); }},
           {.showAbout = [this]
            { showAboutDialog(ui::makeAboutInfo(JUCE_APPLICATION_VERSION_STRING, kWithAsio), dialogParent_); },
            .languages =
@@ -199,6 +212,7 @@ std::unique_ptr<juce::Component> AppComposition::createMainComponent()
         TrackViewContext{.project = project_,
                          .editor = trackEditor_,
                          .recording = recording_,
+                         .transcription = transcription_,
                          .transport = transportControl_,
                          .meter = inputMeter_,
                          .inputNames = [this] { return inputNames(); },

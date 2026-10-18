@@ -33,8 +33,8 @@ MainComponent::MainComponent(juce::AudioDeviceManager& deviceManager,
                              TrackViewContext tracks,
                              std::function<void()> addVoice)
     : deviceManager_(deviceManager), deviceSupervisor_(deviceSupervisor), recording_(tracks.recording),
-      transport_(tracks.transport), editor_(tracks.editor), project_(tracks.project),
-      tracks_(std::move(tracks))
+      transcription_(tracks.transcription), transport_(tracks.transport), editor_(tracks.editor),
+      project_(tracks.project), tracks_(std::move(tracks))
 {
     addVoiceButton_.setButtonText("+");
     addVoiceButton_.setTooltip(i18n::trJuce("Add a voice on the next free input"));
@@ -141,11 +141,13 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* /*source*/)
 void MainComponent::timerCallback()
 {
     recording_.poll();
+    transcription_.poll();
     showTransportState();
     showClick();
-    status_.setText(juce::String::fromUTF8(
-                        ui::audioStatusText(describeDevice(deviceManager_, deviceSupervisor_)).c_str()),
-                    juce::dontSendNotification);
+    auto status = ui::audioStatusText(describeDevice(deviceManager_, deviceSupervisor_));
+    if (const auto notes = transcription_.statusText(); !notes.empty())
+        status += "   ·   " + notes;
+    status_.setText(juce::String::fromUTF8(status.c_str()), juce::dontSendNotification);
 }
 
 void MainComponent::showTransportState()

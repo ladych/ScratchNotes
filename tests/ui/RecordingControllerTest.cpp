@@ -25,6 +25,7 @@ namespace fs = std::filesystem;
 using io::FakeBinaryFile;
 using io::FakeFileContent;
 using ::testing::_;
+using ::testing::ElementsAre;
 using ::testing::HasSubstr;
 using ::testing::Invoke;
 using ::testing::NiceMock;
@@ -101,6 +102,7 @@ protected:
     std::optional<fs::path> projectFolder = folder;
     double sampleRate = 48000.0;
     std::vector<std::string> messages;
+    std::vector<std::string> recordedTakes;
     std::map<std::string, std::shared_ptr<FakeFileContent>> files;
 
     juce::UndoManager undoManager;
@@ -128,7 +130,8 @@ protected:
          .latencySamples = [this] { return latency; },
          .now = [] { return std::string{"2026-10-17T09:40:00"}; },
          .showMessage = [this](const std::string& /*title*/, const std::string& message)
-         { messages.push_back(message); }}};
+         { messages.push_back(message); },
+         .takesRecorded = [this](const std::vector<std::string>& takeIds) { recordedTakes = takeIds; }}};
 };
 
 TEST_F(RecordingControllerTest, FAU05_ArmsVoices)
@@ -267,6 +270,7 @@ TEST_F(RecordingControllerTest, FAU05_ArmedVoicesRecordTogether)
     EXPECT_EQ(bass.numTakes(), 1);
     EXPECT_EQ(bass.activeTake()->wetFile(), "");
     EXPECT_EQ(samplesIn("audio/Bass Take 1 DI.wav"), 10U);
+    EXPECT_THAT(recordedTakes, ElementsAre(guitar.activeTake()->id(), bass.activeTake()->id()));
 }
 
 TEST_F(RecordingControllerTest, FPJ04_APassIsOneUndoStep)
@@ -423,6 +427,7 @@ TEST_F(RecordingControllerTest, FAU04_RemovedVoiceGetsNoTake)
     controller.stop();
 
     EXPECT_EQ(guitar.numTakes(), 1);
+    EXPECT_THAT(recordedTakes, ElementsAre(guitar.activeTake()->id()));
 }
 
 TEST_F(RecordingControllerTest, FAU02_WriteErrorsAreReported)

@@ -36,6 +36,8 @@ void fillTakes(TrackRow& row, const model::Voice& voice, double sampleRate)
     {
         const auto take = voice.take(number);
         auto label = i18n::tr("Take %1 · %2", std::to_string(number + 1), clockTime(take.recordedAt()));
+        if (take.hasNotes())
+            label += i18n::tr(" · %1 notes", std::to_string(take.noteCount()));
         if (take.isAudioMissing())
             label += i18n::tr(" (missing)");
         row.takes.push_back(std::move(label));

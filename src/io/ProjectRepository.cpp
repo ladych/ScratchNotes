@@ -2,6 +2,7 @@
 
 #include "io/Utf8Path.h"
 #include "model/ModelIds.h"
+#include "model/Project.h"
 
 #include <string>
 #include <utility>
@@ -37,6 +38,22 @@ std::vector<TakeFile> takeFiles(const juce::ValueTree& project)
     return files;
 }
 
+/// The takes with a transcription (F-TX-01).
+std::vector<juce::ValueTree> transcribedTakes(const juce::ValueTree& project)
+{
+    std::vector<juce::ValueTree> takes;
+    for (const auto& voice : project.getChildWithName(ids::voices))
+        for (const auto& take : voice.getChildWithName(ids::takes))
+            if (take.hasProperty(ids::notesFile))
+                takes.push_back(take);
+    return takes;
+}
+
+std::filesystem::path notesPath(const std::filesystem::path& folder, const juce::ValueTree& take)
+{
+    return folder / pathFromUtf8(take[ids::notesFile].toString().toStdString());
+}
+
 } // namespace
 
 ProjectRepository::ProjectRepository(IFileSystem& fileSystem) : fileSystem_(fileSystem) {}
@@ -60,6 +77,10 @@ LoadResult ProjectRepository::load(const std::filesystem::path& folder)
         takeFile.take.setProperty(ids::audioMissing, true, nullptr);
         missing.push_back({takeFile.voice[ids::name].toString().toStdString(), takeFile.file});
     }
+    // A lost transcription is not reported; the take is transcribed again.
+    for (const auto& take : transcribedTakes(parsed.project))
+        if (!fileSystem_.exists(notesPath(folder, take)))
+            model::Take{take, nullptr}.clearNotes();
     return {parsed.project, ProjectFileError::none, std::move(missing)};
 }
 
@@ -93,6 +114,14 @@ ProjectFileError ProjectRepository::saveCopy(const juce::ValueTree& project,
         const auto source = from / relative;
         const auto target = to / relative;
         if (!fileSystem_.copyFile(source, target))
+            return ProjectFileError::writeFailed;
+    }
+    for (const auto& take : transcribedTakes(project))
+    {
+        const auto source = notesPath(from, take);
+        if (!fileSystem_.exists(source))
+            continue;
+        if (!fileSystem_.copyFile(source, notesPath(to, take)))
             return ProjectFileError::writeFailed;
     }
     return save(project, to);

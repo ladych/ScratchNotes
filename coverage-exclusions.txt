@@ -32,3 +32,6 @@ src/app/JuceTakeAudioLoader.cpp # reads a take file with JUCE's WAV reader, no l
 src/app/LatencyDialog.h         # JUCE controls of the latency dialog, logic in ui::LatencyCalibration
 src/app/LatencyDialog.cpp       # JUCE controls of the latency dialog, logic in ui::LatencyCalibration
 src/engine/MonitorSource.h      # only an enum, no executable lines
+src/app/TranscriptionThread.h  # juce::Thread running transcription::transcribe, logic in ui::TranscriptionController
+src/app/TranscriptionThread.cpp # juce::Thread running transcription::transcribe, logic in ui::TranscriptionController
+src/cli/TranscribeMain.cpp      # main of scratchnotes-transcribe: reads WAV files with JUCE and writes the results, logic in transcription/

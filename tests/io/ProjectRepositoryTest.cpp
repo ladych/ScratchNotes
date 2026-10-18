@@ -125,6 +125,46 @@ TEST_F(ProjectRepositoryTest, FPJ03_MissingAudioIsMarkedAndReported)
     EXPECT_FALSE(loaded.voice(0).take(1).isAudioMissing());
 }
 
+TEST_F(ProjectRepositoryTest, FTX01_LoadForgetsLostTranscriptions)
+{
+    project.voice(0).take(0).setNotes("audio/t1-di.notes.csv", 3);
+    project.voice(0).take(1).setNotes("audio/t2-di.notes.csv", 4);
+    EXPECT_CALL(fileSystem, readText(_)).WillOnce(Return(ProjectSerializer::toXml(tree)));
+    EXPECT_CALL(fileSystem, exists(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(fileSystem, exists(folder / "audio" / "t2-di.notes.csv")).WillOnce(Return(false));
+
+    const auto result = repository.load(folder);
+
+    const model::Project loaded{result.project, nullptr};
+    EXPECT_EQ(loaded.voice(0).take(0).noteCount(), 3);
+    EXPECT_EQ(loaded.voice(0).take(1).notesFile(), "");
+    EXPECT_TRUE(result.missingAudio.empty());
+}
+
+TEST_F(ProjectRepositoryTest, FTX01_SaveCopyCopiesTheTranscriptions)
+{
+    project.voice(0).take(0).setNotes("audio/t1-di.notes.csv", 3);
+    project.voice(0).take(1).setNotes("audio/t2-di.notes.csv", 4);
+    EXPECT_CALL(fileSystem, exists(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(fileSystem, exists(folder / "audio" / "t2-di.notes.csv")).WillOnce(Return(false));
+    EXPECT_CALL(fileSystem, copyFile(_, _)).Times(3).WillRepeatedly(Return(true));
+    EXPECT_CALL(fileSystem,
+                copyFile(folder / "audio" / "t1-di.notes.csv", copyFolder / "audio" / "t1-di.notes.csv"))
+        .WillOnce(Return(true));
+
+    EXPECT_EQ(repository.saveCopy(tree, folder, copyFolder), ProjectFileError::none);
+}
+
+TEST_F(ProjectRepositoryTest, FTX01_SaveCopyFailsIfATranscriptionCannotBeCopied)
+{
+    project.voice(0).take(0).setNotes("audio/t1-di.notes.csv", 3);
+    EXPECT_CALL(fileSystem, copyFile(_, _)).WillRepeatedly(Return(true));
+    EXPECT_CALL(fileSystem, copyFile(folder / "audio" / "t1-di.notes.csv", _)).WillOnce(Return(false));
+    EXPECT_CALL(fileSystem, writeText(_, _)).Times(0);
+
+    EXPECT_EQ(repository.saveCopy(tree, folder, copyFolder), ProjectFileError::writeFailed);
+}
+
 TEST_F(ProjectRepositoryTest, FPJ02_SaveCopyCopiesTheTakeAudio)
 {
     EXPECT_CALL(fileSystem, createDirectories(copyFolder / "audio")).Times(2).WillRepeatedly(Return(true));

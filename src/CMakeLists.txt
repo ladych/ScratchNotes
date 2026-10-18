@@ -29,7 +29,16 @@ add_library(snotes_core STATIC
     model/TreeNode.cpp
     model/UuidGenerator.cpp
     notation/ScoreRenderer.cpp
+    transcription/CommandLine.cpp
+    transcription/LevelGate.cpp
+    transcription/NoteCsv.cpp
+    transcription/NoteMidi.cpp
+    transcription/NoteCreation.cpp
+    transcription/OnnxPitchModel.cpp
     transcription/OnnxRuntime.cpp
+    transcription/PitchAnalysis.cpp
+    transcription/Resampler.cpp
+    transcription/Transcriber.cpp
     ui/AboutInfo.cpp
     ui/AudioStatus.cpp
     ui/DocumentController.cpp
@@ -41,6 +50,7 @@ add_library(snotes_core STATIC
     ui/TakeAudioCache.cpp
     ui/ThemeSetting.cpp
     ui/TrackList.cpp
+    ui/TranscriptionController.cpp
     ui/TransportControl.cpp
     ui/VoiceList.cpp
 )
@@ -65,6 +75,7 @@ set(SNOTES_APP_SOURCES
     app/MainComponent.cpp
     app/MainMenu.cpp
     app/TrackView.cpp
+    app/TranscriptionThread.cpp
     app/WriterThread.cpp
 )
 
@@ -97,3 +108,22 @@ target_include_directories(ScratchNotes SYSTEM PRIVATE
 target_link_libraries(ScratchNotes PRIVATE snotes_core)
 snotes_copy_onnxruntime(ScratchNotes)
 snotes_copy_verovio_data(ScratchNotes)
+
+# The Basic Pitch model (Apache 2.0, resources/Models/LICENSE) is built into the program and the command line
+# tool, so the note detection needs no files next to them (F-TX-02).
+juce_add_binary_data(ScratchNotesModel
+    HEADER_NAME ModelData.h
+    NAMESPACE ModelData
+    SOURCES "${PROJECT_SOURCE_DIR}/resources/Models/basic-pitch.onnx")
+target_link_libraries(ScratchNotes PRIVATE $<LINK_ONLY:ScratchNotesModel>)
+target_include_directories(ScratchNotes SYSTEM PRIVATE
+    $<TARGET_PROPERTY:ScratchNotesModel,INTERFACE_INCLUDE_DIRECTORIES>)
+
+# Command line tool (Pflichtenheft 3): the note detection without the program. Humble main, logic in
+# transcription/CommandLine, NoteCsv and NoteMidi.
+add_executable(scratchnotes-transcribe cli/TranscribeMain.cpp)
+snotes_enable_warnings(scratchnotes-transcribe)
+target_link_libraries(scratchnotes-transcribe PRIVATE snotes_core $<LINK_ONLY:ScratchNotesModel>)
+target_include_directories(scratchnotes-transcribe SYSTEM PRIVATE
+    $<TARGET_PROPERTY:ScratchNotesModel,INTERFACE_INCLUDE_DIRECTORIES>)
+snotes_copy_onnxruntime(scratchnotes-transcribe)

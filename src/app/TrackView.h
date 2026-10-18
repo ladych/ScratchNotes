@@ -5,6 +5,7 @@
 #include "ui/LevelMeter.h"
 #include "ui/RecordingController.h"
 #include "ui/TrackList.h"
+#include "ui/TranscriptionController.h"
 #include "ui/TransportControl.h"
 
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -27,6 +28,7 @@ struct TrackViewContext
     juce::ValueTree project;
     ui::TrackEditor& editor;
     ui::RecordingController& recording;
+    ui::TranscriptionController& transcription;
     ui::TransportControl& transport;
     engine::InputMeter& meter;
     /// Names of the inputs of the open device.

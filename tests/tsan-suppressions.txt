@@ -1,0 +1,5 @@
+# ThreadSanitizer suppressions for the tsan preset (Q-04).
+# ONNX Runtime comes as a prebuilt, uninstrumented library: TSan does not see how its own thread pool
+# synchronises, so the allocations of its worker threads look like races. Our code calls it from one
+# thread at a time (transcription::OnnxPitchModel).
+race:libonnxruntime.so

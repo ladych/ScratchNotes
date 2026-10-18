@@ -37,6 +37,8 @@ struct RecordingEnvironment
     /// Local date and time for Take::recordedAt, e.g. "2026-10-17T09:40:00".
     std::function<std::string()> now;
     std::function<void(const std::string& title, const std::string& message)> showMessage;
+    /// Ids of the takes a pass added, for the transcription in the background (F-TX-01).
+    std::function<void(const std::vector<std::string>& takeIds)> takesRecorded;
 };
 
 /// Presenter for recording (F-AU-02, F-AU-04, F-AU-05, F-WI-04): arms voices, starts and stops a pass of all

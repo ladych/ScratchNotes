@@ -53,6 +53,13 @@ struct AudioMenuActions
 };
 
 /// Actions of the menu "Hilfe", with the submenus "Sprache" and "Farbschema".
+struct NotesActions
+{
+    std::function<void()> transcribe;
+    std::function<void()> cancel;
+    std::function<bool()> running;
+};
+
 struct HelpActions
 {
     std::function<void()> showAbout;
@@ -62,8 +69,8 @@ struct HelpActions
     std::function<void(const std::string& setting)> chooseTheme;
 };
 
-/// Humble object (E-03): menus "Datei", "Bearbeiten", "Transport", "Audio" and "Hilfe" with their shortcuts,
-/// forwarding every command to the actions.
+/// Humble object (E-03): menus "Datei", "Bearbeiten", "Transport", "Audio", "Noten" and "Hilfe" with their
+/// shortcuts, forwarding every command to the actions.
 class MainMenu final : public juce::MenuBarModel, public juce::ApplicationCommandTarget
 {
 public:
@@ -72,6 +79,7 @@ public:
              EditActions edit,
              TransportActions transport,
              AudioMenuActions audio,
+             NotesActions notes,
              HelpActions help);
     ~MainMenu() override;
 
@@ -101,6 +109,7 @@ private:
     EditActions edit_;
     TransportActions transport_;
     AudioMenuActions audio_;
+    NotesActions notes_;
     HelpActions help_;
     juce::ApplicationCommandManager commands_;
 };

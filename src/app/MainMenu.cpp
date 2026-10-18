@@ -28,6 +28,8 @@ constexpr juce::CommandID transportClick = 0x1204;
 constexpr juce::CommandID audioSettings = 0x2001;
 constexpr juce::CommandID audioTestTone = 0x2002;
 constexpr juce::CommandID audioLatency = 0x2003;
+constexpr juce::CommandID notesTranscribe = 0x3001;
+constexpr juce::CommandID notesCancel = 0x3002;
 constexpr juce::CommandID helpAbout = 0x9001;
 } // namespace command
 
@@ -136,6 +138,18 @@ constexpr std::array kCommands{
         i18n::marked("Audio"),
         0,
         0},
+    CommandSpec{command::notesTranscribe,
+                i18n::marked("Detect notes"),
+                i18n::marked("Detect the notes of the active take of every voice again"),
+                i18n::marked("Notes"),
+                't',
+                kCtrlShift},
+    CommandSpec{command::notesCancel,
+                i18n::marked("Cancel note detection"),
+                i18n::marked("Stop detecting notes; takes already done keep their notes"),
+                i18n::marked("Notes"),
+                0,
+                0},
     CommandSpec{command::helpAbout,
                 i18n::marked("About and licenses..."),
                 i18n::marked("Version, license and the components of other authors"),
@@ -144,7 +158,7 @@ constexpr std::array kCommands{
                 0},
 };
 
-constexpr int kHelpMenu = 4;
+constexpr int kHelpMenu = 5;
 /// Item IDs of the submenus "Sprache" and "Farbschema", outside the command IDs.
 constexpr int kFirstLanguageItem = 0x9100;
 constexpr int kFirstThemeItem = 0x9200;
@@ -164,6 +178,8 @@ std::vector<juce::CommandID> menuCommands(int menuIndex)
             command::transportPlay, command::transportStart, command::recordToggle, command::transportClick};
     case 3:
         return {command::audioSettings, command::audioLatency, command::audioTestTone};
+    case 4:
+        return {command::notesTranscribe, command::notesCancel};
     default:
         return {command::helpAbout};
     }
@@ -184,9 +200,11 @@ MainMenu::MainMenu(std::function<void()> quit,
                    EditActions edit,
                    TransportActions transport,
                    AudioMenuActions audio,
+                   NotesActions notes,
                    HelpActions help)
     : quit_(std::move(quit)), file_(std::move(file)), edit_(std::move(edit)),
-      transport_(std::move(transport)), audio_(std::move(audio)), help_(std::move(help))
+      transport_(std::move(transport)), audio_(std::move(audio)), notes_(std::move(notes)),
+      help_(std::move(help))
 {
     commands_.registerAllCommandsForTarget(this);
     commands_.setFirstCommandTarget(this);
@@ -205,6 +223,7 @@ juce::StringArray MainMenu::getMenuBarNames()
                              i18n::marked("Edit"),
                              i18n::marked("Transport"),
                              i18n::marked("Audio"),
+                             i18n::marked("Notes"),
                              i18n::marked("Help")})
         names.add(i18n::trJuce(name));
     return names;
@@ -283,6 +302,8 @@ void MainMenu::getCommandInfo(juce::CommandID commandID, juce::ApplicationComman
         result.setActive(edit_.canUndo());
     if (commandID == command::editRedo)
         result.setActive(edit_.canRedo());
+    if (commandID == command::notesCancel)
+        result.setActive(notes_.running());
 }
 
 bool MainMenu::perform(const InvocationInfo& info)
@@ -296,7 +317,7 @@ bool MainMenu::perform(const InvocationInfo& info)
 
 std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
 {
-    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 16> actions{{
+    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 18> actions{{
         {command::fileQuit, &quit_},
         {command::fileNew, &file_.newProject},
         {command::fileOpen, &file_.open},
@@ -312,6 +333,8 @@ std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
         {command::audioLatency, &audio_.showLatency},
         {command::audioSettings, &audio_.showSettings},
         {command::audioTestTone, &audio_.toggleTestTone},
+        {command::notesTranscribe, &notes_.transcribe},
+        {command::notesCancel, &notes_.cancel},
         {command::helpAbout, &help_.showAbout},
     }};
     for (const auto& [id, action] : actions)

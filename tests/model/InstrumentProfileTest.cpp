@@ -30,6 +30,9 @@ TEST(InstrumentProfileTest, FAU01_BassesUseTheBassClef)
     EXPECT_EQ(findInstrumentProfile("bass4-e")->clef, Clef::bass8vb);
     EXPECT_EQ(findInstrumentProfile("guitar7-gs")->clef, Clef::treble8vb);
     EXPECT_EQ(findInstrumentProfile("guitar7-gs")->frets, 24);
+    EXPECT_TRUE(findInstrumentProfile("bass4-e")->transcribeOctaveUp);
+    EXPECT_TRUE(findInstrumentProfile("bass5-gs")->transcribeOctaveUp);
+    EXPECT_FALSE(findInstrumentProfile("guitar7-gs")->transcribeOctaveUp);
 }
 
 TEST(InstrumentProfileTest, FAU01_UnknownIdFindsNothing)

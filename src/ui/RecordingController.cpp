@@ -230,17 +230,20 @@ void RecordingController::finish()
     const auto dropped = session_->droppedSamples();
     const auto start = std::max<std::int64_t>(session_->startSample(), 0);
     undoManager_.beginNewTransaction();
+    std::vector<std::string> added;
+    added.reserve(pending_.size());
     for (auto& take : pending_)
     {
         take.data.startSample = start;
         take.data.latencyOffsetSamples = latency_;
         if (auto voice = model::Project{project_, &undoManager_}.findVoice(take.voiceId))
-            voice->addTake(take.data);
+            added.push_back(voice->addTake(take.data).id());
     }
     writer_.reset();
     session_.reset();
     pending_.clear();
     state_ = State::idle;
+    environment_.takesRecorded(added);
     if (!written)
         showError(i18n::tr("Writing the recording failed. The takes may be incomplete; is the disk full?"));
     else if (dropped > 0)
