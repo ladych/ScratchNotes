@@ -2,6 +2,7 @@
 
 #include "io/IFileSystem.h"
 
+#include <cstdint>
 #include <juce_data_structures/juce_data_structures.h>
 
 #include <filesystem>

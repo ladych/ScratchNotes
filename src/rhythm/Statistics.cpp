@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <numeric>
+#include <utility>
 
 namespace snotes::rhythm
 {

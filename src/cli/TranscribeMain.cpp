@@ -16,6 +16,7 @@
 #include "transcription/Transcriber.h"
 
 #include <ModelData.h>
+#include <cstddef>
 #include <juce_audio_formats/juce_audio_formats.h>
 
 #include <chrono>
@@ -28,6 +29,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace

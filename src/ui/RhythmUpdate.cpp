@@ -10,7 +10,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace snotes::ui
