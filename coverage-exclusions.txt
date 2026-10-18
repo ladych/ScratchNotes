@@ -13,7 +13,7 @@ src/app/MainComponent.h         # JUCE component layout, content from ui::format
 src/app/MainComponent.cpp       # JUCE component layout and dialog launch, content from ui::formatAudioStatus
 src/app/AudioDeviceSupervisor.h # drives juce::AudioDeviceManager, decisions in audio::DeviceRecovery and audio::driverTypesByPreference
 src/app/AudioDeviceSupervisor.cpp # drives juce::AudioDeviceManager, decisions in audio::DeviceRecovery and audio::driverTypesByPreference
-src/app/AudioCallback.h         # driver callback forwarding to engine::TestToneSource
+src/app/AudioCallback.h         # driver callback forwarding to engine::AudioEngine
 src/app/AboutDialog.h           # JUCE labels and links of the info dialog, content from ui::makeAboutInfo
 src/app/AboutDialog.cpp         # JUCE labels and links of the info dialog, content from ui::makeAboutInfo
 src/app/Dialogs.h               # opens JUCE dialog windows, no logic
@@ -27,3 +27,8 @@ src/app/TrackView.h             # JUCE track view: rows, meters, waveforms; cont
 src/app/TrackView.cpp           # JUCE track view: rows, meters, waveforms; content from ui::trackRows, edits via ui::TrackEditor
 src/app/WriterThread.h          # juce::Thread pumping io::TakeFileWriter, no logic
 src/app/WriterThread.cpp        # juce::Thread pumping io::TakeFileWriter, no logic
+src/app/JuceTakeAudioLoader.h   # reads a take file with JUCE's WAV reader, no logic
+src/app/JuceTakeAudioLoader.cpp # reads a take file with JUCE's WAV reader, no logic
+src/app/LatencyDialog.h         # JUCE controls of the latency dialog, logic in ui::LatencyCalibration
+src/app/LatencyDialog.cpp       # JUCE controls of the latency dialog, logic in ui::LatencyCalibration
+src/engine/MonitorSource.h      # only an enum, no executable lines

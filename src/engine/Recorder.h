@@ -46,8 +46,9 @@ public:
         return session_.load() != &session && inUse_.load() != &session;
     }
 
-    /// Audio thread: records the block into the current session, if any.
-    void process(const float* const* inputs, int numInputs, int numSamples) noexcept
+    /// Audio thread: records the block, whose first sample is at song position `position`, into the
+    /// current session, if any.
+    void process(const float* const* inputs, int numInputs, int numSamples, std::int64_t position) noexcept
     {
         RecordingSession* session = session_.load();
         for (;;)
@@ -61,7 +62,7 @@ public:
             session = latest;
         }
         if (session != nullptr)
-            session->record(inputs, numInputs, numSamples);
+            session->record(inputs, numInputs, numSamples, position);
         inUse_.store(nullptr);
     }
 

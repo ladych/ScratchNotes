@@ -191,9 +191,10 @@ bool DocumentController::saveTo(const std::filesystem::path& folder)
 void DocumentController::replaceProject(const juce::ValueTree& newProject,
                                         std::optional<std::filesystem::path> folder)
 {
+    // The folder first: listeners of the tree, like the snapshot publisher loading the takes, need it.
+    currentFolder_ = std::move(folder);
     project_.copyPropertiesAndChildrenFrom(newProject, nullptr);
     undoManager_.clearUndoHistory();
-    currentFolder_ = std::move(folder);
     setUnsavedChanges(false);
 }
 

@@ -1,6 +1,7 @@
 #include "app/Dialogs.h"
 
 #include "app/AboutDialog.h"
+#include "app/LatencyDialog.h"
 #include "i18n/Translate.h"
 
 #include <memory>
@@ -47,6 +48,16 @@ void showAudioSettingsDialog(juce::AudioDeviceManager& deviceManager, juce::Comp
                                                                          false);
     selector->setSize(kSettingsWidth, kSettingsHeight);
     launch(std::move(selector), i18n::trJuce("Audio settings"), centreAround, true);
+}
+
+void showLatencyDialog(ui::LatencyCalibration& calibration,
+                       ui::LatencyCompensation& compensation,
+                       const std::vector<std::string>& inputNames,
+                       juce::Component* centreAround)
+{
+    launch(std::make_unique<LatencyDialog>(calibration, compensation, inputNames),
+           i18n::trJuce("Latency compensation"),
+           centreAround);
 }
 
 void showAboutDialog(const ui::AboutInfo& info, juce::Component* centreAround)

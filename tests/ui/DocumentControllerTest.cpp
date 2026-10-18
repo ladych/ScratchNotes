@@ -3,6 +3,7 @@
 #include "io/MockProjectRepository.h"
 #include "model/Project.h"
 #include "model/ProjectFactory.h"
+#include "model/TreeChangeListener.h"
 #include "ui/FakeDocumentView.h"
 
 #include <gmock/gmock.h>
@@ -85,6 +86,19 @@ TEST_F(DocumentControllerTest, FPJ01_StartsANewProjectNamedAfterDateAndTime)
     EXPECT_EQ(controller.windowTitle(), view.windowTitle);
     EXPECT_FALSE(controller.currentFolder().has_value());
     EXPECT_FALSE(controller.hasUnsavedChanges());
+}
+
+TEST_F(DocumentControllerTest, FWI02_FolderIsKnownWhenTheOpenedProjectArrives)
+{
+    EXPECT_CALL(repository, load(rehearsal)).WillOnce(Return(loadableProject("Probe")));
+    std::vector<std::optional<std::filesystem::path>> foldersSeen;
+    const model::TreeChangeListener listener{tree,
+                                             [&] { foldersSeen.push_back(controller.currentFolder()); }};
+
+    controller.start(rehearsal);
+
+    ASSERT_FALSE(foldersSeen.empty());
+    EXPECT_EQ(foldersSeen.front(), rehearsal);
 }
 
 TEST_F(DocumentControllerTest, FPJ02_StartReopensTheLastProject)

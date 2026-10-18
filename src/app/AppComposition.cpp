@@ -5,6 +5,7 @@
 #include "app/Dialogs.h"
 #include "app/MainComponent.h"
 #include "io/Utf8Path.h"
+#include "model/Project.h"
 #include "model/ProjectFactory.h"
 #include "ui/AboutInfo.h"
 #include "ui/VoiceList.h"
@@ -85,7 +86,10 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
               lookAndFeel.setTheme(shown);
               theme::refreshWindows();
           }),
-      project_(model::ProjectFactory::createDefault({})), snapshotPublisher_(project_, snapshots_),
+      project_(model::ProjectFactory::createDefault({})),
+      takeAudio_(takeLoader_, [this] { return document_.currentFolder(); }),
+      snapshotPublisher_(
+          project_, snapshots_, [this](const std::string& file) { return takeAudio_.audio(file); }),
       projectRepository_(fileSystem_), lastProjectSettings_(fileSystem_, settingsFile("last-project.txt")),
       document_(
           project_,
@@ -96,22 +100,20 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .timestamp = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%d %H-%M").toStdString(); },
            .rememberFolder = [this](const std::filesystem::path& folder)
            { lastProjectSettings_.save(io::utf8FromPath(folder)); }}),
+      latencySettings_(fileSystem_, settingsFile("latency-offset.txt")), latency_(latencySettings_),
       trackEditor_(model::Project{project_, &undoManager_}),
       recording_(
           project_,
           undoManager_,
           recorder_,
+          transport_,
           fileSystem_,
           writerThread_,
           idGenerator_,
           {.projectFolder = [this](const ui::RecordingEnvironment::FolderCallback& onFolder)
            { document_.withFolder(onFolder); },
-           .deviceSampleRate =
-               [this]
-           {
-               auto* device = deviceManager_.getCurrentAudioDevice();
-               return device != nullptr ? device->getCurrentSampleRate() : 0.0;
-           },
+           .deviceSampleRate = [this] { return deviceSampleRate(); },
+           .latencySamples = [this] { return latency_.samples(deviceInfo()); },
            .now = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%dT%H:%M:%S").toStdString(); },
            .showMessage =
                [](const std::string& title, const std::string& message)
@@ -122,8 +124,19 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
                                                           juce::String::fromUTF8(message.c_str())),
                    nullptr);
            }}),
+      transportControl_(
+          transport_,
+          {.sampleRate = [this] { return deviceSampleRate(); },
+           .isRecording = [this] { return recording_.state() != ui::RecordingController::State::idle; },
+           .stopRecording = [this] { recording_.stop(); }}),
+      latencyCalibration_(latencyProbe_, transport_, latency_, [this] { return deviceInfo(); }),
       deviceSettings_(fileSystem_, settingsFile("audio-device.xml")),
-      testTone_(kTestToneFrequencyHz, kTestToneGain), audioCallback_(testTone_, inputMeter_, recorder_),
+      testTone_(kTestToneFrequencyHz, kTestToneGain), audioCallback_({.snapshots = snapshots_,
+                                                                      .transport = transport_,
+                                                                      .meter = inputMeter_,
+                                                                      .recorder = recorder_,
+                                                                      .tone = testTone_,
+                                                                      .probe = latencyProbe_}),
       deviceSupervisor_(deviceManager_, deviceSettings_, audioCallback_, kDefaultChannels),
       mainMenu_(
           [this] { requestQuit(); },
@@ -136,11 +149,18 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .canUndo = [this] { return document_.canUndo(); },
            .canRedo = [this] { return document_.canRedo(); },
            .addVoice = [this] { addVoice(); }},
-          {.toggle = [this] { recording_.toggle(); },
-           .recording = [this] { return recording_.state() != ui::RecordingController::State::idle; }},
+          {.togglePlay = [this] { transportControl_.togglePlay(); },
+           .returnToStart = [this] { transportControl_.returnToStart(); },
+           .toggleRecord = [this] { recording_.toggle(); },
+           .toggleClick = [this]
+           { trackEditor_.setClickOn(!model::Project{project_, nullptr}.mix().isClickOn()); },
+           .playing = [this] { return transportControl_.isPlaying(); },
+           .recording = [this] { return recording_.state() != ui::RecordingController::State::idle; },
+           .clickOn = [this] { return model::Project{project_, nullptr}.mix().isClickOn(); }},
           {.showSettings = [this] { showAudioSettings(); },
            .toggleTestTone = [this] { testTone_.setEnabled(!testTone_.isEnabled()); },
-           .testToneOn = [this] { return testTone_.isEnabled(); }},
+           .testToneOn = [this] { return testTone_.isEnabled(); },
+           .showLatency = [this] { showLatency(); }},
           {.showAbout = [this]
            { showAboutDialog(ui::makeAboutInfo(JUCE_APPLICATION_VERSION_STRING, kWithAsio), dialogParent_); },
            .languages =
@@ -179,6 +199,7 @@ std::unique_ptr<juce::Component> AppComposition::createMainComponent()
         TrackViewContext{.project = project_,
                          .editor = trackEditor_,
                          .recording = recording_,
+                         .transport = transportControl_,
                          .meter = inputMeter_,
                          .inputNames = [this] { return inputNames(); },
                          .projectFolder = [this] { return document_.currentFolder(); }},
@@ -225,6 +246,22 @@ std::vector<std::string> AppComposition::inputNames()
 void AppComposition::showAudioSettings()
 {
     showAudioSettingsDialog(deviceManager_, dialogParent_);
+}
+
+void AppComposition::showLatency()
+{
+    showLatencyDialog(latencyCalibration_, latency_, inputNames(), dialogParent_);
+}
+
+ui::AudioDeviceInfo AppComposition::deviceInfo()
+{
+    return describeDevice(deviceManager_, deviceSupervisor_);
+}
+
+double AppComposition::deviceSampleRate()
+{
+    auto* device = deviceManager_.getCurrentAudioDevice();
+    return device != nullptr ? device->getCurrentSampleRate() : 0.0;
 }
 
 } // namespace snotes::app

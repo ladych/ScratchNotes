@@ -1,12 +1,18 @@
 add_executable(snotes_tests
     audio/DeviceRecoveryTest.cpp
     audio/DriverChoiceTest.cpp
+    engine/AudioEngineTest.cpp
     engine/AudioRingBufferTest.cpp
+    engine/ClickTrackTest.cpp
     engine/InputMeterTest.cpp
+    engine/LatencyProbeTest.cpp
+    engine/PlaybackMixerTest.cpp
     engine/RecorderTest.cpp
     engine/SnapshotExchangeTest.cpp
     engine/SpscQueueTest.cpp
+    engine/TakeAudioTest.cpp
     engine/TestToneSourceTest.cpp
+    engine/TransportTest.cpp
     i18n/GermanTestLanguage.cpp
     i18n/LanguageCatalogTest.cpp
     i18n/TranslateTest.cpp
@@ -26,10 +32,14 @@ add_executable(snotes_tests
     ui/AboutInfoTest.cpp
     ui/AudioStatusTest.cpp
     ui/DocumentControllerTest.cpp
+    ui/LatencyCalibrationTest.cpp
+    ui/LatencyCompensationTest.cpp
     ui/LevelMeterTest.cpp
     ui/RecordingControllerTest.cpp
+    ui/TakeAudioCacheTest.cpp
     ui/ThemeSettingTest.cpp
     ui/TrackListTest.cpp
+    ui/TransportControlTest.cpp
     ui/VoiceListTest.cpp
 )
 
