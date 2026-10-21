@@ -66,6 +66,9 @@ struct CleanUpRules
     /// A light cluster this many beats before a heavier one is its grace note.
     double graceBeats = 0.35;
     double graceWeightRatio = 0.7;
+    /// Not in the PoC: a cluster without attack whose notes all lie below a ringing note or in its pitch
+    /// classes is a ghost of the model (subharmonics on the 7-string, notes split at its window seams).
+    bool dropGhostsUnderRinging = true;
 };
 
 [[nodiscard]] CleanUpRules rulesFor(Style style);

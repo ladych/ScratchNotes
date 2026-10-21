@@ -109,14 +109,15 @@ std::vector<double> tempoCurve(const std::vector<double>& beats)
     return tempo;
 }
 
-VoiceRhythm voiceRhythm(const RhythmTrack& track, const BeatGrid& grid)
+VoiceRhythm voiceRhythm(const RhythmTrack& track, const BeatGrid& grid, const RhythmOptions& options)
 {
     std::vector<double> beats;
     beats.reserve(grid.beats.size());
     for (const double beat : grid.beats)
         beats.push_back(beat - track.startSeconds);
     VoiceRhythm rhythm{.style = guessStyle(track.notes), .quantization = {}};
-    const auto rules = rulesFor(rhythm.style.style);
+    auto rules = rulesFor(rhythm.style.style);
+    rules.dropGhostsUnderRinging = options.dropGhostsUnderRinging;
     rhythm.quantization = quantize(
         cleanUp(clusterOnsets(track.notes, rules.relativeAmplitude), track.onsets.detail, beats, rules),
         beats);

@@ -37,7 +37,8 @@ protected:
     [[nodiscard]] Quantization events() const
     {
         const auto notes = test::readNotes(GetParam());
-        const auto rules = rulesFor(guessStyle(notes).style);
+        auto rules = rulesFor(guessStyle(notes).style);
+        rules.dropGhostsUnderRinging = false;
         const auto beats = test::readBeats(GetParam(), true);
         return quantize(cleanUp(clusterOnsets(notes, rules.relativeAmplitude),
                                 test::readFloats(GetParam() + "-oenv256.f32"),

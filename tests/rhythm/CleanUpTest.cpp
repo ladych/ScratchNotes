@@ -108,6 +108,46 @@ TEST(CleanUpTest, FTX07_NotesAfterTheOnsetsHaveNoAttack)
     EXPECT_DOUBLE_EQ(clusters[0].flux, 0.0);
 }
 
+TEST(CleanUpTest, FTX07_DropsAGhostWithoutAttackBelowAHeldNote)
+{
+    // An F2 held for two seconds makes the model hear a G#1 half a second later (Alex' recording 4).
+    const std::vector<Note> notes{note(1.0, 2.0, 41), note(1.5, 0.3, 32)};
+    EXPECT_THAT(pitchesOf(cleaned(notes, Style::melody)), ElementsAre(ElementsAre(41)));
+
+    auto poc = rulesFor(Style::melody);
+    poc.dropGhostsUnderRinging = false;
+    EXPECT_THAT(
+        pitchesOf(cleanUp(clusterOnsets(notes, poc.relativeAmplitude), attackAtOneSecond(), kBeats, poc)),
+        ElementsAre(ElementsAre(41), ElementsAre(32)));
+}
+
+TEST(CleanUpTest, FTX07_KeepsAStruckNoteBelowAHeldOne)
+{
+    EXPECT_THAT(pitchesOf(cleaned({note(0.5, 2.0, 41), note(1.0, 0.5, 32)}, Style::melody)),
+                ElementsAre(ElementsAre(41), ElementsAre(32)));
+}
+
+TEST(CleanUpTest, FTX07_DropsNotesSplitAtAWindowSeam)
+{
+    // F2 struck, A2 added later; both start again where they stop, without an attack.
+    const std::vector<Note> notes{
+        note(1.0, 0.6, 41), note(1.3, 0.3, 45), note(1.6, 0.4, 41), note(1.6, 0.4, 45)};
+    EXPECT_THAT(pitchesOf(cleaned(notes, Style::riff)), ElementsAre(ElementsAre(41), ElementsAre(45)));
+}
+
+TEST(CleanUpTest, FTX07_KeepsAPullOff)
+{
+    // A#1 stops as G#1 starts on the open string.
+    EXPECT_THAT(pitchesOf(cleaned({note(1.0, 0.52, 34), note(1.5, 0.3, 32)}, Style::melody)),
+                ElementsAre(ElementsAre(34), ElementsAre(32)));
+}
+
+TEST(CleanUpTest, FTX07_KeepsANoteAboveAHeldOne)
+{
+    EXPECT_THAT(pitchesOf(cleaned({note(1.0, 1.0, 41), note(1.5, 0.3, 48)}, Style::melody)),
+                ElementsAre(ElementsAre(41), ElementsAre(48)));
+}
+
 TEST(CleanUpTest, FTX07_StyleFromTheShareOfChords)
 {
     EXPECT_EQ(guessStyle({}), StyleGuess{});
@@ -123,6 +163,9 @@ TEST(CleanUpTest, FTX07_RulesOfThePoc)
     EXPECT_DOUBLE_EQ(rulesFor(Style::riff).graceBeats, 0.35);
     EXPECT_FALSE(rulesFor(Style::melody).mergeLateNotes);
     EXPECT_DOUBLE_EQ(rulesFor(Style::melody).graceWeightRatio, 0.5);
+    // Beyond the PoC, on for both styles.
+    EXPECT_TRUE(rulesFor(Style::riff).dropGhostsUnderRinging);
+    EXPECT_TRUE(rulesFor(Style::melody).dropGhostsUnderRinging);
 }
 
 } // namespace
