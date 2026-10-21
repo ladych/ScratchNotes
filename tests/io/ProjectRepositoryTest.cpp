@@ -141,6 +141,42 @@ TEST_F(ProjectRepositoryTest, FTX01_LoadForgetsLostTranscriptions)
     EXPECT_TRUE(result.missingAudio.empty());
 }
 
+TEST_F(ProjectRepositoryTest, FTX09_LoadForgetsTranscriptionsWithLostOnsetsOrEvents)
+{
+    for (int index = 0; index < 2; ++index)
+    {
+        auto take = project.voice(0).take(index);
+        const auto stem = "audio/t" + std::to_string(index + 1) + "-di.";
+        take.setNotes(stem + "notes.csv", 3);
+        take.setOnsets(stem + "onsets.csv");
+        take.setEvents(stem + "events.csv", 2);
+    }
+    EXPECT_CALL(fileSystem, readText(_)).WillOnce(Return(ProjectSerializer::toXml(tree)));
+    EXPECT_CALL(fileSystem, exists(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(fileSystem, exists(folder / "audio" / "t2-di.events.csv")).WillOnce(Return(false));
+
+    const model::Project loaded{repository.load(folder).project, nullptr};
+
+    EXPECT_EQ(loaded.voice(0).take(0).eventCount(), 2);
+    EXPECT_EQ(loaded.voice(0).take(1).notesFile(), "");
+    EXPECT_EQ(loaded.voice(0).take(1).onsetsFile(), "");
+}
+
+TEST_F(ProjectRepositoryTest, FTX09_SaveCopyCopiesOnsetsAndEvents)
+{
+    auto take = project.voice(0).take(0);
+    take.setNotes("audio/t1-di.notes.csv", 3);
+    take.setOnsets("audio/t1-di.onsets.csv");
+    take.setEvents("audio/t1-di.events.csv", 2);
+    EXPECT_CALL(fileSystem, exists(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(fileSystem, copyFile(_, _)).WillRepeatedly(Return(true));
+    for (const char* file : {"t1-di.notes.csv", "t1-di.onsets.csv", "t1-di.events.csv"})
+        EXPECT_CALL(fileSystem, copyFile(folder / "audio" / file, copyFolder / "audio" / file))
+            .WillOnce(Return(true));
+
+    EXPECT_EQ(repository.saveCopy(tree, folder, copyFolder), ProjectFileError::none);
+}
+
 TEST_F(ProjectRepositoryTest, FTX01_SaveCopyCopiesTheTranscriptions)
 {
     project.voice(0).take(0).setNotes("audio/t1-di.notes.csv", 3);

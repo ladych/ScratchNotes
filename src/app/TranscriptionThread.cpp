@@ -1,6 +1,10 @@
 #include "app/TranscriptionThread.h"
 
+#include "engine/TakeAudio.h"
+
+#include "rhythm/OnsetStrength.h"
 #include "transcription/OnnxPitchModel.h"
+#include "transcription/Resampler.h"
 #include "transcription/Transcriber.h"
 
 #include <exception>
@@ -13,6 +17,13 @@ namespace
 {
 
 constexpr int kStopTimeoutMs = 10000;
+
+std::vector<float> allSamples(const engine::TakeAudio& audio)
+{
+    std::vector<float> samples(static_cast<std::size_t>(audio.length()));
+    audio.read(0, static_cast<int>(audio.length()), samples.data());
+    return samples;
+}
 
 } // namespace
 
@@ -68,9 +79,8 @@ ui::TranscriptionOutcome TranscriptionThread::transcribe(const ui::Transcription
     {
         const auto audio = loader_.load(job.diFile);
         if (audio == nullptr)
-            return {.status = Status::failed, .notes = {}};
-        std::vector<float> samples(static_cast<std::size_t>(audio->length()));
-        audio->read(0, static_cast<int>(audio->length()), samples.data());
+            return {.status = Status::failed, .notes = {}, .onsets = {}};
+        const auto samples = allSamples(*audio);
         if (model_ == nullptr)
             model_ = std::make_unique<transcription::OnnxPitchModel>(modelData_, modelSize_);
         auto notes = transcription::transcribe(samples,
@@ -83,12 +93,15 @@ ui::TranscriptionOutcome TranscriptionThread::transcribe(const ui::Transcription
                                                    return !cancelled_ && !threadShouldExit();
                                                });
         if (!notes)
-            return {.status = Status::cancelled, .notes = {}};
-        return {.status = Status::done, .notes = std::move(*notes)};
+            return {.status = Status::cancelled, .notes = {}, .onsets = {}};
+        return {.status = Status::done,
+                .notes = std::move(*notes),
+                .onsets = rhythm::measureOnsets(
+                    transcription::resample(samples, job.sampleRate, rhythm::kAnalysisRate))};
     }
     catch (const std::exception&)
     {
-        return {.status = Status::failed, .notes = {}};
+        return {.status = Status::failed, .notes = {}, .onsets = {}};
     }
 }
 

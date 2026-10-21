@@ -20,6 +20,16 @@ TEST(CommandLineTest, FTX02_ReadsProfileFolderAndRecordings)
     EXPECT_EQ(parsed.options->profileId, "bass5-gs");
     EXPECT_EQ(parsed.options->outputFolder, "results");
     EXPECT_THAT(parsed.options->recordings, ElementsAre("a.wav", "b.wav"));
+    EXPECT_FALSE(parsed.options->separateGrids);
+}
+
+TEST(CommandLineTest, FTX05_SeparateGridsForUnrelatedRecordings)
+{
+    const auto parsed = parseCommandLine({"a.wav", "--separate", "b.wav"});
+
+    ASSERT_TRUE(parsed.options.has_value());
+    EXPECT_TRUE(parsed.options->separateGrids);
+    EXPECT_THAT(parsed.options->recordings, ElementsAre("a.wav", "b.wav"));
 }
 
 TEST(CommandLineTest, FTX02_DefaultsToTheSixStringGuitarNextToTheRecording)
@@ -64,6 +74,23 @@ TEST(NoteCsvTest, FTX02_WritesOneLinePerNoteWithDecimalPoints)
     EXPECT_EQ(notesToCsv(notes),
               "start,end,pitch,amplitude\n0.5000,1.2500,40,0.800\n2.0000,2.1235,52,0.457\n");
     EXPECT_EQ(notesToCsv({}), "start,end,pitch,amplitude\n");
+}
+
+TEST(NoteCsvTest, FTX05_ReadsWhatItWrote)
+{
+    const std::vector<Note> notes{{.startSeconds = 0.5, .endSeconds = 1.25, .pitch = 40, .amplitude = 0.75F}};
+
+    EXPECT_EQ(notesFromCsv(notesToCsv(notes)), notes);
+    EXPECT_EQ(notesFromCsv(notesToCsv({})), std::vector<Note>{});
+    EXPECT_EQ(notesFromCsv(""), std::vector<Note>{});
+}
+
+TEST(NoteCsvTest, FTX05_RejectsWhatIsNoNote)
+{
+    EXPECT_FALSE(notesFromCsv("start,end,pitch,amplitude\n0.5,1.0,40\n").has_value());
+    EXPECT_FALSE(notesFromCsv("start,end,pitch,amplitude\n0.5;1.0;40;0.5\n").has_value());
+    EXPECT_FALSE(notesFromCsv("start,end,pitch,amplitude\n0.5,1.0;40,0.5\n").has_value());
+    EXPECT_FALSE(notesFromCsv("start,end,pitch,amplitude\n0.5,1.0,40;0.5\n").has_value());
 }
 
 } // namespace

@@ -179,6 +179,8 @@ countries: de at ch li lu be
 "Writing the notes failed; is the disk full?" = "Die Noten konnten nicht gespeichert werden; ist die Festplatte voll?"
 "Detecting notes: %1, take %2, %3 %" = "Noten erkennen: %1, Take %2, %3 %"
 "Detecting notes: %1 %" = "Noten erkennen: %1 %"
+"Writing the rhythm failed; is the disk full?" = "Der Rhythmus konnte nicht gespeichert werden; ist die Festplatte voll?"
+"Beat grid: %1 BPM, %2/4 (%3 %)" = "Beat-Raster: %1 BPM, %2/4-Takt (%3 %)"
 " (%1 more)" = " (%1 weitere)"
 " · %1 notes" = " · %1 Noten"
 

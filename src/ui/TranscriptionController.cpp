@@ -3,7 +3,9 @@
 #include "i18n/Translate.h"
 #include "io/Utf8Path.h"
 #include "model/InstrumentProfile.h"
+#include "rhythm/RhythmCsv.h"
 #include "transcription/NoteCsv.h"
+#include "ui/RhythmUpdate.h"
 
 #include <algorithm>
 #include <cmath>
@@ -14,9 +16,7 @@ namespace snotes::ui
 
 std::string notesFileFor(const std::string& diFile)
 {
-    auto file = io::pathFromUtf8(diFile);
-    file.replace_extension(".notes.csv");
-    return io::genericUtf8FromPath(file);
+    return fileNextTo(diFile, "notes.csv");
 }
 
 TranscriptionController::TranscriptionController(juce::ValueTree project,
@@ -68,12 +68,24 @@ void TranscriptionController::poll()
     const auto takeId = running_.value();
     running_.reset();
     if (outcome->status == TranscriptionOutcome::Status::done)
-        store(takeId, outcome->notes);
+        store(takeId, *outcome);
     else if (outcome->status == TranscriptionOutcome::Status::failed)
         environment_.showMessage(
             i18n::tr("Note detection"),
             i18n::tr("The notes of a take could not be detected; is its DI file readable?"));
     startNext();
+    updateRhythmWhenDone();
+}
+
+void TranscriptionController::updateRhythmWhenDone()
+{
+    const auto folder = environment_.projectFolder();
+    if (running_ || !rhythmPending_ || !folder)
+        return;
+    rhythmPending_ = false;
+    if (updateRhythm(project_, fileSystem_, *folder) == RhythmUpdate::writeFailed)
+        environment_.showMessage(i18n::tr("Note detection"),
+                                 i18n::tr("Writing the rhythm failed; is the disk full?"));
 }
 
 std::string TranscriptionController::statusText() const
@@ -137,7 +149,7 @@ std::optional<TranscriptionJob> TranscriptionController::jobFor(const std::strin
     return job;
 }
 
-void TranscriptionController::store(const std::string& takeId, const std::vector<transcription::Note>& notes)
+void TranscriptionController::store(const std::string& takeId, const TranscriptionOutcome& outcome)
 {
     const auto folder = environment_.projectFolder();
     const auto located = locate(takeId);
@@ -146,13 +158,22 @@ void TranscriptionController::store(const std::string& takeId, const std::vector
         return;
     auto take = takeAt(*located);
     const auto file = notesFileFor(take.diFile());
-    if (!fileSystem_.writeText(*folder / io::pathFromUtf8(file), transcription::notesToCsv(notes)))
+    const auto onsetsFile = fileNextTo(take.diFile(), "onsets.csv");
+    const auto notesPath = *folder / io::pathFromUtf8(file);
+    const auto onsetsPath = *folder / io::pathFromUtf8(onsetsFile);
+    const auto notesText = transcription::notesToCsv(outcome.notes);
+    const auto onsetsText = rhythm::onsetsToCsv(outcome.onsets);
+    const bool written =
+        fileSystem_.writeText(notesPath, notesText) && fileSystem_.writeText(onsetsPath, onsetsText);
+    if (!written)
     {
         environment_.showMessage(i18n::tr("Note detection"),
                                  i18n::tr("Writing the notes failed; is the disk full?"));
         return;
     }
-    take.setNotes(file, static_cast<int>(notes.size()));
+    take.setNotes(file, static_cast<int>(outcome.notes.size()));
+    take.setOnsets(onsetsFile);
+    rhythmPending_ = true;
 }
 
 std::optional<TranscriptionController::Located>

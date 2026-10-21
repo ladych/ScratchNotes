@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/MonitorSource.h"
+#include "model/BeatGrid.h"
 #include "model/TreeNode.h"
 
 #include <cstdint>
@@ -45,11 +46,20 @@ public:
     [[nodiscard]] std::string notesFile() const;
     [[nodiscard]] int noteCount() const;
     [[nodiscard]] bool hasNotes() const;
+    /// Onset strength of the DI file for the beat tracking (F-TX-04); empty before transcription.
+    [[nodiscard]] std::string onsetsFile() const;
+    /// Cleaned and quantized events on the beat grid (F-TX-07, F-TX-09); empty without a beat grid.
+    [[nodiscard]] std::string eventsFile() const;
+    [[nodiscard]] int eventCount() const;
 
     void setStartSample(std::int64_t startSample);
     void setLatencyOffsetSamples(std::int64_t latencyOffsetSamples);
     /// Stores the result of a transcription. Not undoable: the file stays written either way.
     void setNotes(const std::string& file, int count);
+    void setOnsets(const std::string& file);
+    void setEvents(const std::string& file, int count);
+    void clearEvents();
+    /// Also forgets the onsets and events, which belong to the notes.
     void clearNotes();
 };
 
@@ -147,6 +157,8 @@ public:
     void removeVoice(int index);
 
     [[nodiscard]] Mix mix() const;
+    /// The beat grid of all voices; changes to it are not undoable, like the notes.
+    [[nodiscard]] BeatGrid beatGrid() const;
 
 private:
     [[nodiscard]] juce::ValueTree child(const juce::Identifier& type) const;

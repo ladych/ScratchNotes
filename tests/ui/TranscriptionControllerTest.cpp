@@ -4,11 +4,13 @@
 #include "model/ModelIds.h"
 #include "model/Project.h"
 #include "model/ProjectFactory.h"
+#include "rhythm/RhythmReference.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <filesystem>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -36,9 +38,12 @@ public:
         return std::exchange(outcome, {});
     }
 
-    void finish(TranscriptionOutcome::Status status, std::vector<transcription::Note> notes = {})
+    void finish(TranscriptionOutcome::Status status,
+                std::vector<transcription::Note> notes = {},
+                rhythm::Onsets onsets = {})
     {
-        outcome = TranscriptionOutcome{.status = status, .notes = std::move(notes)};
+        outcome =
+            TranscriptionOutcome{.status = status, .notes = std::move(notes), .onsets = std::move(onsets)};
     }
 
     std::vector<TranscriptionJob> jobs;
@@ -228,6 +233,123 @@ TEST_F(TranscriptionControllerTest, FTX01_AQueuedTakeDeletedMeanwhileIsSkipped)
 
     EXPECT_EQ(worker.jobs.size(), 1U);
     EXPECT_FALSE(controller.isRunning());
+}
+
+TEST_F(TranscriptionControllerTest, FTX04_StoresTheOnsetsNextToTheNotes)
+{
+    controller.transcribeNew({"t3"});
+
+    EXPECT_CALL(fileSystem, writeText(_, _)).WillRepeatedly(Return(true));
+    EXPECT_CALL(fileSystem,
+                writeText(folder / "audio" / "Guitar Take 1 DI.onsets.csv", "hop,values\n441,0.5\n256,1\n"))
+        .WillOnce(Return(true));
+    worker.finish(TranscriptionOutcome::Status::done, twoNotes, {.beat = {0.5F}, .detail = {1.0F}});
+    controller.poll();
+
+    EXPECT_EQ(project.voice(1).take(0).onsetsFile(), "audio/Guitar Take 1 DI.onsets.csv");
+}
+
+TEST_F(TranscriptionControllerTest, FTX04_OnsetsThatCannotBeWrittenAreReported)
+{
+    controller.transcribeNew({"t3"});
+
+    EXPECT_CALL(fileSystem, writeText(_, _)).WillOnce(Return(true)).WillOnce(Return(false));
+    finishWith(twoNotes);
+
+    ASSERT_EQ(messages.size(), 1U);
+    EXPECT_THAT(messages[0], HasSubstr("Festplatte"));
+    EXPECT_FALSE(project.voice(1).take(0).hasNotes());
+}
+
+/// The written files are read back, as from the project folder.
+class TranscriptionControllerRhythmTest : public TranscriptionControllerTest
+{
+protected:
+    void SetUp() override
+    {
+        TranscriptionControllerTest::SetUp();
+        ON_CALL(fileSystem, writeText(_, _))
+            .WillByDefault(
+                [this](const fs::path& file, const std::string& text)
+                {
+                    files[file] = text;
+                    return true;
+                });
+        ON_CALL(fileSystem, readText(_))
+            .WillByDefault(
+                [this](const fs::path& file) -> std::optional<std::string>
+                {
+                    const auto found = files.find(file);
+                    if (found == files.end())
+                        return std::nullopt;
+                    return found->second;
+                });
+    }
+
+    void finishWithTheRiff()
+    {
+        worker.finish(TranscriptionOutcome::Status::done,
+                      rhythm::test::readNotes("riff"),
+                      {.beat = rhythm::test::readFloats("riff-oenv441.f32"),
+                       .detail = rhythm::test::readFloats("riff-oenv256.f32")});
+        controller.poll();
+    }
+
+    std::map<fs::path, std::string> files;
+};
+
+TEST_F(TranscriptionControllerRhythmTest, FTX05_UpdatesTheBeatGridWhenTheQueueIsDone)
+{
+    controller.transcribeActiveTakes();
+    finishWithTheRiff();
+    EXPECT_TRUE(project.beatGrid().beats().empty());
+
+    finishWith({});
+
+    EXPECT_FALSE(project.beatGrid().beats().empty());
+    EXPECT_EQ(project.voice(0).take(1).eventsFile(), "audio/Bass Take 2 DI.events.csv");
+    EXPECT_GT(project.voice(0).take(1).eventCount(), 0);
+    EXPECT_EQ(project.voice(1).take(0).eventCount(), 0);
+    EXPECT_TRUE(messages.empty());
+}
+
+TEST_F(TranscriptionControllerRhythmTest, FTX05_NoUpdateWithoutNewNotesOrProject)
+{
+    controller.transcribeActiveTakes();
+    finishWithTheRiff();
+    currentFolder.reset();
+    finishWith({});
+    EXPECT_TRUE(project.beatGrid().beats().empty());
+
+    currentFolder = folder;
+    controller.transcribeNew({"t3"});
+    worker.finish(TranscriptionOutcome::Status::cancelled);
+    controller.poll();
+    // The bass notes are still waiting for the grid.
+    EXPECT_FALSE(project.beatGrid().beats().empty());
+
+    project.beatGrid().clear();
+    controller.transcribeNew({"t3"});
+    worker.finish(TranscriptionOutcome::Status::cancelled);
+    controller.poll();
+    EXPECT_TRUE(project.beatGrid().beats().empty());
+}
+
+TEST_F(TranscriptionControllerRhythmTest, FTX09_EventsThatCannotBeWrittenAreReported)
+{
+    controller.transcribeNew({"t2"});
+    EXPECT_CALL(fileSystem, writeText(_, _))
+        .WillRepeatedly(
+            [this](const fs::path& file, const std::string& text)
+            {
+                files[file] = text;
+                return file.string().find("events") == std::string::npos;
+            });
+
+    finishWithTheRiff();
+
+    ASSERT_EQ(messages.size(), 1U);
+    EXPECT_THAT(messages[0], HasSubstr("Rhythmus"));
 }
 
 TEST(NotesFileTest, FTX01_LiesNextToTheDiFile)

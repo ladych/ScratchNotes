@@ -92,10 +92,44 @@ void Take::setNotes(const std::string& file, int count)
     mutableTree().setProperty(ids::noteCount, count, nullptr);
 }
 
+std::string Take::onsetsFile() const
+{
+    return getString(ids::onsetsFile);
+}
+
+std::string Take::eventsFile() const
+{
+    return getString(ids::eventsFile);
+}
+
+int Take::eventCount() const
+{
+    return getInt(ids::eventCount, 0);
+}
+
+void Take::setOnsets(const std::string& file)
+{
+    mutableTree().setProperty(ids::onsetsFile, juce::String::fromUTF8(file.c_str()), nullptr);
+}
+
+void Take::setEvents(const std::string& file, int count)
+{
+    mutableTree().setProperty(ids::eventsFile, juce::String::fromUTF8(file.c_str()), nullptr);
+    mutableTree().setProperty(ids::eventCount, count, nullptr);
+}
+
+void Take::clearEvents()
+{
+    mutableTree().removeProperty(ids::eventsFile, nullptr);
+    mutableTree().removeProperty(ids::eventCount, nullptr);
+}
+
 void Take::clearNotes()
 {
     mutableTree().removeProperty(ids::notesFile, nullptr);
     mutableTree().removeProperty(ids::noteCount, nullptr);
+    mutableTree().removeProperty(ids::onsetsFile, nullptr);
+    clearEvents();
 }
 
 void Take::setStartSample(std::int64_t startSample)
@@ -362,6 +396,11 @@ void Project::removeVoice(int index)
 Mix Project::mix() const
 {
     return {child(ids::mix), undoManager()};
+}
+
+BeatGrid Project::beatGrid() const
+{
+    return BeatGrid{child(ids::beatGrid)};
 }
 
 juce::ValueTree Project::child(const juce::Identifier& type) const

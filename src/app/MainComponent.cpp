@@ -5,6 +5,7 @@
 #include "model/Project.h"
 #include "ui/AudioStatus.h"
 #include "ui/RecordingTime.h"
+#include "ui/RhythmUpdate.h"
 
 #include <string>
 #include <utility>
@@ -146,6 +147,8 @@ void MainComponent::timerCallback()
     showClick();
     // The note detection comes first, so it is seen next to a long audio status.
     auto status = transcription_.statusText();
+    if (status.empty())
+        status = ui::beatGridSummary(project_);
     if (!status.empty())
         status += "   ·   ";
     status += ui::audioStatusText(describeDevice(deviceManager_, deviceSupervisor_));

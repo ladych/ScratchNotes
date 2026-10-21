@@ -20,6 +20,7 @@ add_library(snotes_core STATIC
     io/StdFileSystem.cpp
     io/TakeFileWriter.cpp
     io/WavWriter.cpp
+    model/BeatGrid.cpp
     model/InstrumentProfile.cpp
     model/Project.cpp
     model/ProjectFactory.cpp
@@ -29,6 +30,15 @@ add_library(snotes_core STATIC
     model/TreeNode.cpp
     model/UuidGenerator.cpp
     notation/ScoreRenderer.cpp
+    rhythm/BeatTracker.cpp
+    rhythm/CleanUp.cpp
+    rhythm/Fft.cpp
+    rhythm/Meter.cpp
+    rhythm/OnsetStrength.cpp
+    rhythm/Quantizer.cpp
+    rhythm/RhythmAnalysis.cpp
+    rhythm/RhythmCsv.cpp
+    rhythm/Statistics.cpp
     transcription/CommandLine.cpp
     transcription/LevelGate.cpp
     transcription/NoteCsv.cpp
@@ -47,6 +57,7 @@ add_library(snotes_core STATIC
     ui/LevelMeter.cpp
     ui/RecordingController.cpp
     ui/RecordingTime.cpp
+    ui/RhythmUpdate.cpp
     ui/TakeAudioCache.cpp
     ui/ThemeSetting.cpp
     ui/TrackList.cpp
