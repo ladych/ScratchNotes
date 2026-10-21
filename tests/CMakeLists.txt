@@ -37,6 +37,8 @@ add_executable(snotes_tests
     rhythm/RhythmAnalysisTest.cpp
     rhythm/RhythmCsvTest.cpp
     rhythm/RhythmReference.cpp
+    tab/TabTextTest.cpp
+    tab/TablatureTest.cpp
     transcription/CommandLineTest.cpp
     transcription/LevelGateTest.cpp
     transcription/NoteCreationTest.cpp

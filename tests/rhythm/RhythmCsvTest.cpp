@@ -24,7 +24,7 @@ TEST(RhythmCsvTest, FTX06_MeterSuggestionsMostLikelyFirst)
     EXPECT_EQ(meterToCsv(grid), "beats_per_bar,confidence,phase\n4,0.688,0\n7,0.102,1\n");
 }
 
-TEST(RhythmCsvTest, FTX09_EventsAsFractionsOfBeats)
+TEST(RhythmCsvTest, FTX09_FTB01_EventsAsFractionsOfBeatsWithTheirTab)
 {
     VoiceRhythm rhythm;
     rhythm.quantization.events = {
@@ -42,9 +42,16 @@ TEST(RhythmCsvTest, FTX09_EventsAsFractionsOfBeats)
          .graces = {{43, 44}, {42}}},
     };
 
-    EXPECT_EQ(eventsToCsv(rhythm),
-              "position,duration,seconds,weight,pitches,graces\n0,1/2,0.2500,1.0000,40 47,\n"
-              "4/3,2/3,1.0000,0.5000,45,43 44|42\n");
+    const std::vector<tab::EventTab> tabs{
+        {.notes = {{.string = 0, .fret = 0}, {.string = 1, .fret = 2}}, .graces = {}},
+        {.notes = {{.string = 1, .fret = 0}},
+         .graces = {{{.string = 0, .fret = 3}, {}}, {{.string = 0, .fret = 2}}}},
+    };
+
+    EXPECT_EQ(
+        eventsToCsv(rhythm, tabs, 6),
+        "position,duration,seconds,weight,pitches,graces,tab,grace_tab\n0,1/2,0.2500,1.0000,40 47,,6:0 5:2,\n"
+        "4/3,2/3,1.0000,0.5000,45,43 44|42,5:0,6:3 -|6:2\n");
 }
 
 TEST(RhythmCsvTest, FTX04_OnsetsReadBackAsWritten)

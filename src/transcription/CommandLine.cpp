@@ -20,9 +20,10 @@ std::string commandLineUsage()
 {
     std::string usage =
         "Usage: scratchnotes-transcribe [--profile ID] [--out FOLDER] [--separate] RECORDING...\n"
-        "Detects the notes of DI recordings and writes <name>.notes.csv and <name>.mid, the rhythm of each\n"
-        "voice to <name>.events.csv and the beat grid and meter of all of them, as voices of one piece, to\n"
-        "<first name>.beats.csv and <first name>.meter.csv. --separate gives each recording its own grid.\n"
+        "Detects the notes of DI recordings and writes <name>.notes.csv and <name>.mid, the rhythm and\n"
+        "tablature of each voice to <name>.events.csv and <name>.tab.txt and the beat grid and meter of all\n"
+        "of them, as voices of one piece, to <first name>.beats.csv and <first name>.meter.csv.\n"
+        "--separate gives each recording its own grid. The profile sets the strings of the tablature.\n"
         "Profiles:\n";
     for (const auto& profile : model::instrumentProfiles())
     {

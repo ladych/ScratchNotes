@@ -1,6 +1,7 @@
 #include "rhythm/RhythmCsv.h"
 
 #include "rhythm/OnsetStrength.h"
+#include "tab/TabText.h"
 
 #include <cstddef>
 #include <iomanip>
@@ -54,12 +55,14 @@ std::string meterToCsv(const BeatGrid& grid)
     return csv.str();
 }
 
-std::string eventsToCsv(const VoiceRhythm& rhythm)
+std::string
+eventsToCsv(const VoiceRhythm& rhythm, const std::vector<tab::EventTab>& tabs, std::size_t strings)
 {
     auto csv = csvStream();
-    csv << "position,duration,seconds,weight,pitches,graces\n" << std::setprecision(4);
-    for (const auto& event : rhythm.quantization.events)
+    csv << "position,duration,seconds,weight,pitches,graces,tab,grace_tab\n" << std::setprecision(4);
+    for (std::size_t index = 0; index < rhythm.quantization.events.size(); ++index)
     {
+        const auto& event = rhythm.quantization.events[index];
         csv << event.position.toString() << ',' << event.duration.toString() << ',' << event.seconds << ','
             << event.weight << ',';
         writePitches(csv, event.pitches);
@@ -69,6 +72,9 @@ std::string eventsToCsv(const VoiceRhythm& rhythm)
             csv << (grace == 0 ? "" : "|");
             writePitches(csv, event.graces[grace]);
         }
+        csv << ',' << tab::shapeToText(tabs[index].notes, strings) << ',';
+        for (std::size_t grace = 0; grace < tabs[index].graces.size(); ++grace)
+            csv << (grace == 0 ? "" : "|") << tab::shapeToText(tabs[index].graces[grace], strings);
         csv << '\n';
     }
     return csv.str();

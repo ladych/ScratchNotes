@@ -51,7 +51,7 @@ def read_events(path):
     with open(path) as f:
         next(f)
         for line in f:
-            position, duration, _, weight, pitches, graces = line.rstrip("\n").split(",")
+            position, duration, _, weight, pitches, graces = line.rstrip("\n").split(",")[:6]
             events.append({"qpos": Fraction(position), "qdur": Fraction(duration), "weight": float(weight),
                            "pitches": [int(p) for p in pitches.split()],
                            "graces": [[int(p) for p in g.split()] for g in graces.split("|")] if graces else []})

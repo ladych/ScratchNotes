@@ -2,10 +2,12 @@
 
 #include "i18n/Translate.h"
 #include "io/Utf8Path.h"
+#include "model/InstrumentProfile.h"
 #include "model/Project.h"
 #include "rhythm/RhythmAnalysis.h"
 #include "rhythm/RhythmCsv.h"
 #include "rhythm/Statistics.h"
+#include "tab/Tablature.h"
 #include "transcription/NoteCsv.h"
 
 #include <algorithm>
@@ -25,7 +27,15 @@ struct Analysed
 {
     model::Take take;
     rhythm::RhythmTrack track;
+    tab::Fretboard fretboard;
 };
+
+/// The fretboard of the voice's profile, of the default profile if the id is unknown.
+tab::Fretboard fretboardOf(const model::Voice& voice)
+{
+    const auto profile = model::findInstrumentProfile(voice.profileId());
+    return tab::fretboardOf(profile ? *profile : model::defaultInstrumentProfile());
+}
 
 /// The notes and onsets of the take, if both files can be read.
 std::optional<rhythm::RhythmTrack> readTrack(const model::Take& take,
@@ -66,7 +76,7 @@ std::vector<Analysed> analysedTakes(const model::Project& project,
         if (!active)
             continue;
         if (auto track = readTrack(*active, fileSystem, folder, project.sampleRate()))
-            takes.push_back({.take = *active, .track = std::move(*track)});
+            takes.push_back({.take = *active, .track = std::move(*track), .fretboard = fretboardOf(voice)});
     }
     return takes;
 }
@@ -115,8 +125,10 @@ updateRhythm(juce::ValueTree project, io::IFileSystem& fileSystem, const std::fi
     for (auto& analysed : takes)
     {
         const auto rhythm = rhythm::voiceRhythm(analysed.track, analysis);
+        const auto tabs = tab::tabulate(rhythm.quantization.events, analysed.fretboard);
         const auto file = fileNextTo(analysed.take.diFile(), "events.csv");
-        if (!fileSystem.writeText(folder / io::pathFromUtf8(file), rhythm::eventsToCsv(rhythm)))
+        if (!fileSystem.writeText(folder / io::pathFromUtf8(file),
+                                  rhythm::eventsToCsv(rhythm, tabs, analysed.fretboard.strings.size())))
             return RhythmUpdate::writeFailed;
         analysed.take.setEvents(file, static_cast<int>(rhythm.quantization.events.size()));
     }
