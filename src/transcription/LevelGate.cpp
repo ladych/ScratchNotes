@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 
 namespace snotes::transcription
 {
@@ -43,17 +44,26 @@ std::vector<Note>
 applyLevelGate(const std::vector<Note>& notes, std::span<const float> audio, const GateSettings& settings)
 {
     const auto level = levels(audio);
-    const double threshold = *std::ranges::max_element(level) - settings.rangeDb;
+    const double loudest = *std::ranges::max_element(level);
     const auto last = static_cast<std::ptrdiff_t>(level.size()) - 1;
-    std::vector<Note> kept;
-    for (const auto& note : notes)
+    const auto levelOf = [&](const Note& note)
     {
         const auto frame = static_cast<std::ptrdiff_t>((note.startSeconds * basicpitch::kSampleRate / kHop) +
                                                        kFramesAfterStart);
-        if (level[static_cast<std::size_t>(std::clamp<std::ptrdiff_t>(frame, 0, last))] > threshold &&
-            note.amplitude >= settings.minimumAmplitude)
+        return level[static_cast<std::size_t>(std::clamp<std::ptrdiff_t>(frame, 0, last))];
+    };
+    double playingFrom = std::numeric_limits<double>::infinity();
+    for (const auto& note : notes)
+        if (levelOf(note) > loudest - settings.leadInRangeDb)
+            playingFrom = std::min(playingFrom, note.startSeconds);
+    // Without a loud note there is no lead-in to tell apart.
+    if (std::isinf(playingFrom))
+        playingFrom = -playingFrom;
+    std::vector<Note> kept;
+    for (const auto& note : notes)
+        if (levelOf(note) > loudest - settings.rangeDb && note.amplitude >= settings.minimumAmplitude &&
+            note.startSeconds >= playingFrom)
             kept.push_back(note);
-    }
     return kept;
 }
 
