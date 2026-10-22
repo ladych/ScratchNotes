@@ -63,8 +63,16 @@ struct VoiceRhythm
     bool operator==(const VoiceRhythm&) const = default;
 };
 
+/// What the clean-up does beyond the PoC.
+struct RhythmOptions
+{
+    /// CleanUpRules::dropGhostsUnderRinging; off reproduces the PoC (E-12).
+    bool dropGhostsUnderRinging = true;
+};
+
 /// Cleans up the notes of a track with the rules of its style and quantizes them on the grid (F-TX-07,
 /// F-TX-09). Event times are in the time of the recording, positions count from the first beat of the grid.
-[[nodiscard]] VoiceRhythm voiceRhythm(const RhythmTrack& track, const BeatGrid& grid);
+[[nodiscard]] VoiceRhythm
+voiceRhythm(const RhythmTrack& track, const BeatGrid& grid, const RhythmOptions& options = {});
 
 } // namespace snotes::rhythm

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <numeric>
 #include <ranges>
 #include <set>
@@ -181,6 +182,26 @@ bool absorbedByPrevious(Cluster& cluster, Cluster& previous, const CleanUpRules&
     return cluster.pitches.back() <= previous.pitches.front() - kLowResonance;
 }
 
+/// Whether every pitch of the cluster lies below a note of a kept cluster that rings on past it, or shares
+/// the pitch class of a note that rings or just stopped (as at a window seam of the model). A note that stops
+/// as the cluster starts is left alone: that is a pull-off or a new note, not a ghost.
+bool underRinging(const Cluster& cluster, const std::vector<Cluster>& kept)
+{
+    int highest = std::numeric_limits<int>::min();
+    std::set<int> classes;
+    for (const auto& earlier : kept)
+        for (const auto& note : earlier.notes)
+        {
+            if (note.endSeconds > cluster.seconds + kStillRinging)
+                highest = std::max(highest, note.pitch);
+            if (note.endSeconds > cluster.seconds - kStillRinging)
+                classes.insert(note.pitch % 12);
+        }
+    return std::ranges::all_of(cluster.pitches,
+                               [highest, &classes](int pitch)
+                               { return pitch < highest || classes.contains(pitch % 12); });
+}
+
 /// Light clusters shortly before a heavier one become its grace notes.
 std::vector<Cluster> withGraceNotes(std::vector<Cluster> kept, double beatSeconds, const CleanUpRules& rules)
 {
@@ -218,6 +239,8 @@ std::vector<Cluster> cleanUp(std::vector<Cluster> clusters,
             (cluster.weight < rules.dropSoftWeight && cluster.flux < kStrongAttack))
             continue;
         if (!kept.empty() && cluster.flux < kNoAttack && absorbedByPrevious(cluster, kept.back(), rules))
+            continue;
+        if (rules.dropGhostsUnderRinging && cluster.flux < kNoAttack && underRinging(cluster, kept))
             continue;
         kept.push_back(std::move(cluster));
     }
