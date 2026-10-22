@@ -98,6 +98,21 @@ TEST_F(RhythmUpdateTest, FTX05_StoresTheGridInSongSamplesAndTheEventsOfTheTakes)
     EXPECT_EQ(beatGridSummary(tree), "Beat-Raster: 88 BPM, 4/4-Takt (68 %)");
 }
 
+TEST_F(RhythmUpdateTest, FTB01_TheEventsCarryTheTabOfTheVoicesProfile)
+{
+    const auto events = folder / "audio" / "Bass Take 2 DI.events.csv";
+    ASSERT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+    EXPECT_TRUE(
+        files.at(events).starts_with("position,duration,seconds,weight,pitches,graces,tab,grace_tab\n"));
+    EXPECT_NE(files.at(events).find(",5:"), std::string::npos);
+    EXPECT_EQ(files.at(events).find(",6:"), std::string::npos);
+
+    // An unknown profile falls back to the six-string guitar.
+    project.voice(0).setProfileId("unbekannt");
+    ASSERT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+    EXPECT_NE(files.at(events).find(",6:"), std::string::npos);
+}
+
 TEST_F(RhythmUpdateTest, FTX05_NoGridWithoutReadableTranscriptions)
 {
     project.beatGrid().setAnalysis({1, 2}, {{.numerator = 4, .confidence = 1.0, .phase = 0}});

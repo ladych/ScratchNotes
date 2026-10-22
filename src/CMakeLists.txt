@@ -39,6 +39,8 @@ add_library(snotes_core STATIC
     rhythm/RhythmAnalysis.cpp
     rhythm/RhythmCsv.cpp
     rhythm/Statistics.cpp
+    tab/TabText.cpp
+    tab/Tablature.cpp
     transcription/CommandLine.cpp
     transcription/LevelGate.cpp
     transcription/NoteCsv.cpp

@@ -1,13 +1,15 @@
 // scratchnotes-transcribe (Pflichtenheft 3, tools/): detects the notes of DI recordings without the program,
 // for checking the note detection against the Python prototype and for batch runs over old recordings.
 // Then the rhythm: one beat grid for all recordings (or one per recording with --separate), the meter and
-// the quantized events of each voice.
+// the quantized events of each voice with their tablature.
 
 #include "io/Utf8Path.h"
 #include "model/InstrumentProfile.h"
 #include "rhythm/OnsetStrength.h"
 #include "rhythm/RhythmAnalysis.h"
 #include "rhythm/RhythmCsv.h"
+#include "tab/TabText.h"
+#include "tab/Tablature.h"
 #include "transcription/CommandLine.h"
 #include "transcription/NoteCsv.h"
 #include "transcription/NoteMidi.h"
@@ -19,6 +21,7 @@
 #include <cstddef>
 #include <juce_audio_formats/juce_audio_formats.h>
 
+#include <algorithm>
 #include <chrono>
 #include <exception>
 #include <filesystem>
@@ -97,6 +100,7 @@ struct Transcribed
 {
     std::filesystem::path file;
     rhythm::RhythmTrack track;
+    tab::Fretboard fretboard;
 };
 
 std::optional<Transcribed> transcribeFile(const std::filesystem::path& file,
@@ -130,10 +134,32 @@ std::optional<Transcribed> transcribeFile(const std::filesystem::path& file,
     std::cout << io::utf8FromPath(file) << ": " << notes->size() << " notes, " << std::fixed
               << std::setprecision(1) << seconds << " s audio in " << took.count() << " s\n";
     return Transcribed{.file = file,
-                       .track = {.notes = std::move(*notes), .onsets = onsets, .startSeconds = 0.0}};
+                       .track = {.notes = std::move(*notes), .onsets = onsets, .startSeconds = 0.0},
+                       .fretboard = tab::fretboardOf(*profile)};
 }
 
-/// The grid of the voices to <first name>.beats.csv and .meter.csv, their events to <name>.events.csv.
+/// The events of a voice with their tab to <name>.events.csv and <name>.tab.txt.
+void writeVoice(const Transcribed& voice, const rhythm::BeatGrid& grid, const std::string& outputFolder)
+{
+    const auto rhythm = rhythm::voiceRhythm(voice.track, grid);
+    const auto& events = rhythm.quantization.events;
+    const auto tabs = tab::tabulate(events, voice.fretboard);
+    const auto& meter = grid.meter.ranking.front();
+    const auto stem = outputStem(voice.file, outputFolder);
+    writeText(stem, ".events.csv", rhythm::eventsToCsv(rhythm, tabs, voice.fretboard.strings.size()));
+    writeText(stem,
+              ".tab.txt",
+              tab::tabText(
+                  events, tabs, voice.fretboard, {.beatsPerBar = meter.beatsPerBar, .phase = meter.phase}));
+    std::size_t unplayable = 0;
+    for (const auto& tab : tabs)
+        unplayable += static_cast<std::size_t>(std::ranges::count(tab.notes, tab::Placement{}));
+    std::cout << io::utf8FromPath(voice.file) << ": " << events.size() << " events, "
+              << (rhythm.style.style == rhythm::Style::riff ? "riff" : "melody") << ", " << unplayable
+              << " notes off the fretboard\n";
+}
+
+/// The grid of the voices to <first name>.beats.csv and .meter.csv, then each voice.
 void writeRhythm(const std::vector<Transcribed>& voices, const std::string& outputFolder)
 {
     const auto started = std::chrono::steady_clock::now();
@@ -157,12 +183,7 @@ void writeRhythm(const std::vector<Transcribed>& voices, const std::string& outp
               << analysis.tempoCandidates.front().bpm << " BPM, meter " << meter.beatsPerBar << "/4 ("
               << std::setprecision(0) << 100.0 * meter.confidence << " %)\n";
     for (const auto& voice : voices)
-    {
-        const auto rhythm = rhythm::voiceRhythm(voice.track, analysis);
-        writeText(outputStem(voice.file, outputFolder), ".events.csv", rhythm::eventsToCsv(rhythm));
-        std::cout << io::utf8FromPath(voice.file) << ": " << rhythm.quantization.events.size() << " events, "
-                  << (rhythm.style.style == rhythm::Style::riff ? "riff" : "melody") << '\n';
-    }
+        writeVoice(voice, analysis, outputFolder);
     const std::chrono::duration<double> took = std::chrono::steady_clock::now() - started;
     std::cout << "Rhythm in " << std::setprecision(2) << took.count() << " s\n";
 }
