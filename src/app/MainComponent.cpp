@@ -6,7 +6,9 @@
 #include "ui/AudioStatus.h"
 #include "ui/RecordingTime.h"
 #include "ui/RhythmUpdate.h"
+#include "ui/ScoreDisplay.h"
 
+#include <initializer_list>
 #include <string>
 #include <utility>
 
@@ -26,6 +28,8 @@ constexpr int kRecordButtonWidth = 90;
 constexpr int kTimeWidth = 90;
 constexpr int kClickButtonWidth = 70;
 constexpr int kTempoWidth = 110;
+constexpr int kViewButtonWidth = 64;
+constexpr int kViewGroup = 4711;
 
 } // namespace
 
@@ -35,21 +39,27 @@ MainComponent::MainComponent(juce::AudioDeviceManager& deviceManager,
                              std::function<void()> addVoice)
     : deviceManager_(deviceManager), deviceSupervisor_(deviceSupervisor), recording_(tracks.recording),
       transcription_(tracks.transcription), transport_(tracks.transport), editor_(tracks.editor),
-      project_(tracks.project), tracks_(std::move(tracks))
+      project_(tracks.project), tracks_(std::move(tracks)),
+      score_(tracks_.context().project, tracks_.context().projectFolder)
 {
     addVoiceButton_.setButtonText("+");
     addVoiceButton_.setTooltip(i18n::trJuce("Add a voice on the next free input"));
     addVoiceButton_.onClick = std::move(addVoice);
     setUpTransport();
     setUpClick();
+    setUpViews();
     for (auto* component : std::initializer_list<juce::Component*>{&addVoiceButton_,
                                                                    &startButton_,
                                                                    &playButton_,
                                                                    &recordButton_,
                                                                    &position_,
+                                                                   &tracksButton_,
+                                                                   &notesButton_,
+                                                                   &bothButton_,
                                                                    &clickButton_,
                                                                    &clickTempo_,
                                                                    &tracks_,
+                                                                   &score_,
                                                                    &status_})
         addAndMakeVisible(component);
 
@@ -97,6 +107,31 @@ void MainComponent::setUpClick()
     clickTempo_.onValueChange = [this] { editor_.setClickBpm(clickTempo_.getValue()); };
 }
 
+void MainComponent::setUpViews()
+{
+    const auto setUp = [this](juce::TextButton& button, const juce::String& tip, model::Project::View view)
+    {
+        button.setTooltip(tip);
+        button.setRadioGroupId(kViewGroup);
+        button.setColour(juce::TextButton::buttonOnColourId, theme::colours().highlight);
+        button.onClick = [this, view]
+        {
+            model::Project{project_, nullptr}.setView(view);
+            resized();
+            repaint();
+        };
+    };
+    tracksButton_.setButtonText(i18n::trJuce("Tracks"));
+    notesButton_.setButtonText(i18n::trJuce("Notes"));
+    bothButton_.setButtonText(i18n::trJuce("Both"));
+    setUp(tracksButton_, i18n::trJuce("Show the tracks with their waveforms"), model::Project::View::tracks);
+    setUp(notesButton_, i18n::trJuce("Show the score with notes and tablature"), model::Project::View::notes);
+    setUp(bothButton_, i18n::trJuce("Show tracks and score side by side"), model::Project::View::both);
+    tracksButton_.setConnectedEdges(juce::Button::ConnectedOnRight);
+    notesButton_.setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+    bothButton_.setConnectedEdges(juce::Button::ConnectedOnLeft);
+}
+
 MainComponent::~MainComponent()
 {
     stopTimer();
@@ -108,6 +143,12 @@ void MainComponent::paint(juce::Graphics& g)
     g.fillAll(theme::colours().gap);
     g.setColour(theme::colours().panel);
     g.fillRect(getLocalBounds().withTrimmedBottom(kStatusHeight));
+    if (tracks_.isVisible() && score_.isVisible())
+    {
+        g.setColour(theme::colours().gap);
+        g.fillRect(
+            tracks_.getRight(), tracks_.getY(), score_.getX() - tracks_.getRight(), tracks_.getHeight());
+    }
 }
 
 void MainComponent::resized()
@@ -130,8 +171,24 @@ void MainComponent::resized()
     clickTempo_.setBounds(bar.removeFromRight(kTempoWidth).reduced(0, kPadding / 2));
     bar.removeFromRight(kPadding / 2);
     clickButton_.setBounds(bar.removeFromRight(kClickButtonWidth).reduced(0, kPadding / 2));
+    bar.removeFromRight(kPadding * 3);
+    for (auto* button : {&bothButton_, &notesButton_, &tracksButton_})
+        button->setBounds(bar.removeFromRight(kViewButtonWidth).reduced(0, kPadding / 2));
     area.removeFromTop(kPadding);
-    tracks_.setBounds(area);
+    shownView_ = model::Project{project_, nullptr}.view();
+    const auto widths = ui::viewWidths(shownView_, area.getWidth(), kPadding);
+    tracks_.setVisible(widths.tracks > 0);
+    score_.setVisible(widths.notes > 0);
+    tracks_.setBounds(area.removeFromLeft(widths.tracks));
+    score_.setBounds(area.removeFromRight(widths.notes));
+    showView();
+}
+
+void MainComponent::showView()
+{
+    tracksButton_.setToggleState(shownView_ == model::Project::View::tracks, juce::dontSendNotification);
+    notesButton_.setToggleState(shownView_ == model::Project::View::notes, juce::dontSendNotification);
+    bothButton_.setToggleState(shownView_ == model::Project::View::both, juce::dontSendNotification);
 }
 
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* /*source*/)
@@ -145,6 +202,12 @@ void MainComponent::timerCallback()
     transcription_.poll();
     showTransportState();
     showClick();
+    // An opened project brings its own view.
+    if (model::Project{project_, nullptr}.view() != shownView_)
+    {
+        resized();
+        repaint();
+    }
     // The note detection comes first, so it is seen next to a long audio status.
     auto status = transcription_.statusText();
     if (status.empty())

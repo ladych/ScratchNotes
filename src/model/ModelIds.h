@@ -50,6 +50,8 @@ inline const juce::Identifier phase{"phase"};
 inline const juce::Identifier masterGain{"masterGain"};
 inline const juce::Identifier click{"click"};
 inline const juce::Identifier clickBpm{"clickBpm"};
+inline const juce::Identifier scoreFile{"scoreFile"};
+inline const juce::Identifier view{"view"};
 
 /// Runtime-only marker for a take whose audio file was missing when the project was loaded
 /// (F-PJ-03). It is never written to projekt.snotes.

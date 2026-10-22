@@ -5,6 +5,8 @@
 
 #include "io/Utf8Path.h"
 #include "model/InstrumentProfile.h"
+#include "notation/MusicXml.h"
+#include "notation/Score.h"
 #include "rhythm/OnsetStrength.h"
 #include "rhythm/RhythmAnalysis.h"
 #include "rhythm/RhythmCsv.h"
@@ -101,6 +103,7 @@ struct Transcribed
     std::filesystem::path file;
     rhythm::RhythmTrack track;
     tab::Fretboard fretboard;
+    model::Clef clef = model::Clef::treble8vb;
 };
 
 std::optional<Transcribed> transcribeFile(const std::filesystem::path& file,
@@ -135,11 +138,13 @@ std::optional<Transcribed> transcribeFile(const std::filesystem::path& file,
               << std::setprecision(1) << seconds << " s audio in " << took.count() << " s\n";
     return Transcribed{.file = file,
                        .track = {.notes = std::move(*notes), .onsets = onsets, .startSeconds = 0.0},
-                       .fretboard = tab::fretboardOf(*profile)};
+                       .fretboard = tab::fretboardOf(*profile),
+                       .clef = profile->clef};
 }
 
-/// The events of a voice with their tab to <name>.events.csv and <name>.tab.txt.
-void writeVoice(const Transcribed& voice, const rhythm::BeatGrid& grid, const std::string& outputFolder)
+/// The events of a voice with their tab to <name>.events.csv and <name>.tab.txt; they go into the score.
+notation::VoiceEvents
+writeVoice(const Transcribed& voice, const rhythm::BeatGrid& grid, const std::string& outputFolder)
 {
     const auto rhythm = rhythm::voiceRhythm(voice.track, grid);
     const auto& events = rhythm.quantization.events;
@@ -157,9 +162,30 @@ void writeVoice(const Transcribed& voice, const rhythm::BeatGrid& grid, const st
     std::cout << io::utf8FromPath(voice.file) << ": " << events.size() << " events, "
               << (rhythm.style.style == rhythm::Style::riff ? "riff" : "melody") << ", " << unplayable
               << " notes off the fretboard\n";
+    return {.name = io::utf8FromPath(voice.file.stem()),
+            .clef = voice.clef,
+            .fretboard = voice.fretboard,
+            .events = events,
+            .tabs = tabs};
 }
 
-/// The grid of the voices to <first name>.beats.csv and .meter.csv, then each voice.
+/// Each voice, then the score of all of them in the most likely meter to <stem>.musicxml.
+void writeVoices(const std::vector<Transcribed>& voices,
+                 const rhythm::BeatGrid& grid,
+                 const std::filesystem::path& stem,
+                 const std::string& outputFolder)
+{
+    std::vector<notation::VoiceEvents> scored;
+    scored.reserve(voices.size());
+    for (const auto& voice : voices)
+        scored.push_back(writeVoice(voice, grid, outputFolder));
+    const auto& meter = grid.meter.ranking.front();
+    const auto score = notation::buildScore(scored, {.beatsPerBar = meter.beatsPerBar, .phase = meter.phase});
+    writeText(stem, ".musicxml", notation::toMusicXml(score));
+}
+
+/// The grid of the voices to <first name>.beats.csv and .meter.csv, then each voice, then the score of all
+/// of them to <first name>.musicxml.
 void writeRhythm(const std::vector<Transcribed>& voices, const std::string& outputFolder)
 {
     const auto started = std::chrono::steady_clock::now();
@@ -182,8 +208,7 @@ void writeRhythm(const std::vector<Transcribed>& voices, const std::string& outp
     std::cout << first << ": " << analysis.beats.size() << " beats at " << std::fixed << std::setprecision(1)
               << analysis.tempoCandidates.front().bpm << " BPM, meter " << meter.beatsPerBar << "/4 ("
               << std::setprecision(0) << 100.0 * meter.confidence << " %)\n";
-    for (const auto& voice : voices)
-        writeVoice(voice, analysis, outputFolder);
+    writeVoices(voices, analysis, stem, outputFolder);
     const std::chrono::duration<double> took = std::chrono::steady_clock::now() - started;
     std::cout << "Rhythm in " << std::setprecision(2) << took.count() << " s\n";
 }

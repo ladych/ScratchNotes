@@ -4,6 +4,8 @@
 
 #include <toolkit.h>
 
+#include <string>
+
 namespace snotes::notation
 {
 
@@ -11,6 +13,13 @@ ScoreRenderer::ScoreRenderer(const std::filesystem::path& resourceDirectory)
     : toolkit_(std::make_unique<vrv::Toolkit>(false))
 {
     ready_ = toolkit_->SetResourcePath(io::utf8FromPath(resourceDirectory));
+    toolkit_->SetOptions(
+        R"({"header": "none", "footer": "none", "systemDivider": "none", "adjustPageHeight": true})");
+}
+
+void ScoreRenderer::setPageWidth(int width)
+{
+    toolkit_->SetOptions(R"({"pageWidth": )" + std::to_string(width) + "}");
 }
 
 ScoreRenderer::~ScoreRenderer() = default;

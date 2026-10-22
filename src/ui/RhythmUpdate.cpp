@@ -4,6 +4,8 @@
 #include "io/Utf8Path.h"
 #include "model/InstrumentProfile.h"
 #include "model/Project.h"
+#include "notation/MusicXml.h"
+#include "notation/Score.h"
 #include "rhythm/RhythmAnalysis.h"
 #include "rhythm/RhythmCsv.h"
 #include "rhythm/Statistics.h"
@@ -27,14 +29,14 @@ struct Analysed
 {
     model::Take take;
     rhythm::RhythmTrack track;
-    tab::Fretboard fretboard;
+    std::string name;
+    model::InstrumentProfile profile;
 };
 
-/// The fretboard of the voice's profile, of the default profile if the id is unknown.
-tab::Fretboard fretboardOf(const model::Voice& voice)
+/// The voice's profile, the default profile if the id is unknown.
+model::InstrumentProfile profileOf(const model::Voice& voice)
 {
-    const auto profile = model::findInstrumentProfile(voice.profileId());
-    return tab::fretboardOf(profile ? *profile : model::defaultInstrumentProfile());
+    return model::findInstrumentProfile(voice.profileId()).value_or(model::defaultInstrumentProfile());
 }
 
 /// The notes and onsets of the take, if both files can be read.
@@ -76,7 +78,10 @@ std::vector<Analysed> analysedTakes(const model::Project& project,
         if (!active)
             continue;
         if (auto track = readTrack(*active, fileSystem, folder, project.sampleRate()))
-            takes.push_back({.take = *active, .track = std::move(*track), .fretboard = fretboardOf(voice)});
+            takes.push_back({.take = *active,
+                             .track = std::move(*track),
+                             .name = voice.name(),
+                             .profile = profileOf(voice)});
     }
     return takes;
 }
@@ -94,6 +99,44 @@ void storeGrid(model::BeatGrid grid, const rhythm::BeatGrid& analysis, double sa
                             .confidence = candidate.confidence,
                             .phase = candidate.phase});
     grid.setAnalysis(beats, readings);
+}
+
+/// The events of the take with their tablature next to its DI file; they go into the score. Nothing if the
+/// file cannot be written.
+std::optional<notation::VoiceEvents> writeEvents(Analysed& analysed,
+                                                 const rhythm::BeatGrid& grid,
+                                                 io::IFileSystem& fileSystem,
+                                                 const std::filesystem::path& folder)
+{
+    const auto fretboard = tab::fretboardOf(analysed.profile);
+    const auto rhythm = rhythm::voiceRhythm(analysed.track, grid);
+    auto tabs = tab::tabulate(rhythm.quantization.events, fretboard);
+    const auto file = fileNextTo(analysed.take.diFile(), "events.csv");
+    if (!fileSystem.writeText(folder / io::pathFromUtf8(file),
+                              rhythm::eventsToCsv(rhythm, tabs, fretboard.strings.size())))
+        return std::nullopt;
+    analysed.take.setEvents(file, static_cast<int>(rhythm.quantization.events.size()));
+    notation::VoiceEvents voice;
+    voice.name = analysed.name;
+    voice.clef = analysed.profile.clef;
+    voice.fretboard = fretboard;
+    voice.events = rhythm.quantization.events;
+    voice.tabs = std::move(tabs);
+    return voice;
+}
+
+/// The score of all voices in the chosen meter to kScoreFile; false if it cannot be written.
+bool writeScore(const std::vector<notation::VoiceEvents>& voices,
+                model::BeatGrid grid,
+                io::IFileSystem& fileSystem,
+                const std::filesystem::path& folder)
+{
+    const auto score = notation::buildScore(
+        voices, {.beatsPerBar = std::max(1, grid.chosenMeter()), .phase = grid.downbeatPhase()});
+    if (!fileSystem.writeText(folder / kScoreFile, notation::toMusicXml(score)))
+        return false;
+    grid.setScoreFile(kScoreFile);
+    return true;
 }
 
 } // namespace
@@ -122,17 +165,17 @@ updateRhythm(juce::ValueTree project, io::IFileSystem& fileSystem, const std::fi
     }
     const auto& analysis = *grid;
     storeGrid(model.beatGrid(), analysis, model.sampleRate());
+    std::vector<notation::VoiceEvents> voices;
+    voices.reserve(takes.size());
     for (auto& analysed : takes)
     {
-        const auto rhythm = rhythm::voiceRhythm(analysed.track, analysis);
-        const auto tabs = tab::tabulate(rhythm.quantization.events, analysed.fretboard);
-        const auto file = fileNextTo(analysed.take.diFile(), "events.csv");
-        if (!fileSystem.writeText(folder / io::pathFromUtf8(file),
-                                  rhythm::eventsToCsv(rhythm, tabs, analysed.fretboard.strings.size())))
+        auto voice = writeEvents(analysed, analysis, fileSystem, folder);
+        if (!voice)
             return RhythmUpdate::writeFailed;
-        analysed.take.setEvents(file, static_cast<int>(rhythm.quantization.events.size()));
+        voices.push_back(std::move(*voice));
     }
-    return RhythmUpdate::updated;
+    return writeScore(voices, model.beatGrid(), fileSystem, folder) ? RhythmUpdate::updated
+                                                                    : RhythmUpdate::writeFailed;
 }
 
 std::string beatGridSummary(const juce::ValueTree& project)

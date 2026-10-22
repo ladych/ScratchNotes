@@ -22,10 +22,14 @@ enum class RhythmUpdate : std::uint8_t
     writeFailed,
 };
 
+/// The score of all voices in the project folder (F-NA-02).
+inline constexpr const char* kScoreFile = "score.musicxml";
+
 /// Computes the common beat grid from the active takes with notes and onsets (F-TX-04 to 06) and the events
 /// of each of them (F-TX-07, F-TX-09) with the tablature for the voice's profile (F-TB-01, F-TB-02), written
 /// next to the DI file as "<DI file name>.events.csv".
-/// Events of the other takes are forgotten.
+/// Events of the other takes are forgotten. Then the score of all voices in the chosen meter goes to
+/// kScoreFile (F-NA-01, F-NA-02).
 [[nodiscard]] RhythmUpdate
 updateRhythm(juce::ValueTree project, io::IFileSystem& fileSystem, const std::filesystem::path& folder);
 

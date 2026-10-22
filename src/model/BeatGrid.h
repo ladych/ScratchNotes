@@ -38,8 +38,14 @@ public:
     [[nodiscard]] int chosenMeter() const;
     [[nodiscard]] int downbeatPhase() const;
 
+    /// The score of all voices in the chosen meter (F-NA-02), a MusicXML file relative to the project folder;
+    /// empty without a grid or without notes.
+    [[nodiscard]] std::string scoreFile() const;
+    void setScoreFile(const std::string& file);
+
     /// Stores an analysis; the most likely meter becomes the chosen one.
     void setAnalysis(const std::vector<std::int64_t>& beats, const std::vector<MeterReading>& readings);
+    /// Also forgets the score.
     void clear();
 };
 
