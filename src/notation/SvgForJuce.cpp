@@ -2,6 +2,8 @@
 
 #include <map>
 #include <memory>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace snotes::notation
@@ -75,6 +77,83 @@ void rewrite(juce::XmlElement& element,
     colour(element, ink);
 }
 
+/// Where a group puts what it holds: point * scale + offset.
+struct Placement
+{
+    double scaleX = 1.0;
+    double scaleY = 1.0;
+    double offsetX = 0.0;
+    double offsetY = 0.0;
+};
+
+/// The placement inside an element with this transform; Verovio only translates and scales.
+Placement within(Placement placement, const juce::String& transform)
+{
+    auto tokens = juce::StringArray::fromTokens(transform.replaceCharacters("(),", "   "), " ", "");
+    tokens.removeEmptyStrings();
+    for (int index = 0; index + 2 < tokens.size(); index += 3)
+    {
+        const auto first = tokens[index + 1].getDoubleValue();
+        const auto second = tokens[index + 2].getDoubleValue();
+        if (tokens[index] == "translate")
+        {
+            placement.offsetX += placement.scaleX * first;
+            placement.offsetY += placement.scaleY * second;
+        }
+        else
+        {
+            placement.scaleX *= first;
+            placement.scaleY *= second;
+        }
+    }
+    return placement;
+}
+
+void place(juce::XmlElement& text, const Placement& placement)
+{
+    text.setAttribute("x", (placement.scaleX * text.getDoubleAttribute("x")) + placement.offsetX);
+    text.setAttribute("y", (placement.scaleY * text.getDoubleAttribute("y")) + placement.offsetY);
+    std::vector<juce::XmlElement*> open{&text};
+    while (!open.empty())
+    {
+        auto* element = open.back();
+        open.pop_back();
+        if (element->hasAttribute("font-size"))
+            element->setAttribute(
+                "font-size",
+                juce::String{pixels(element->getStringAttribute("font-size")) * placement.scaleY} + "px");
+        for (auto* child : element->getChildIterator())
+            open.push_back(child);
+    }
+}
+
+/// JUCE gives text in a transformed group a transform of its own and then loses it in the bounds of the
+/// group, so that it draws only some of the fret numbers. Text is therefore moved to the top level, with
+/// its position and size already transformed.
+void liftTexts(juce::XmlElement& root)
+{
+    std::vector<std::tuple<juce::XmlElement*, juce::XmlElement*, Placement>> texts;
+    std::vector<std::pair<juce::XmlElement*, Placement>> open{{&root, Placement{}}};
+    while (!open.empty())
+    {
+        const auto [element, placement] = open.back();
+        open.pop_back();
+        for (auto* child : element->getChildIterator())
+        {
+            if (child->hasTagName("text"))
+                texts.emplace_back(child, element, placement);
+            else
+                open.emplace_back(child, within(placement, child->getStringAttribute("transform")));
+        }
+    }
+    for (const auto& [text, parent, placement] : texts)
+    {
+        parent->removeChildElement(text, false);
+        place(*text, placement);
+        root.addChildElement(text);
+    }
+}
+
 } // namespace
 
 std::unique_ptr<juce::XmlElement> svgForJuce(const std::string& svg, const std::string& ink)
@@ -97,6 +176,7 @@ std::unique_ptr<juce::XmlElement> svgForJuce(const std::string& svg, const std::
             open.push_back(child);
         }
     }
+    liftTexts(*root);
     return root;
 }
 

@@ -12,7 +12,8 @@ namespace snotes::notation
 namespace
 {
 
-/// The shape of Verovio's SVG: a glyph in defs, CSS, an inner svg with a viewBox ten times the page.
+/// The shape of Verovio's SVG: a glyph in defs, CSS, an inner svg with a viewBox ten times the page and the
+/// page margin as a translated group.
 const std::string kVerovioSvg =
     R"svg(<svg width="2100px" height="2970px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   <defs>
@@ -21,6 +22,7 @@ const std::string kVerovioSvg =
   </defs>
   <style type="text/css">path {stroke:currentColor}</style>
   <svg class="definition-scale" color="black" font-family="Times, serif" viewBox="0 0 21000 29700">
+    <g class="page-margin" transform="translate(500, 500)">
     <g class="staff">
       <path d="M0 0 L100 0" stroke-width="13"/>
       <path d="M0 0 L100 0" stroke="red" fill="none"/>
@@ -34,8 +36,14 @@ const std::string kVerovioSvg =
       <ellipse cx="1" cy="1" rx="1" ry="1"/>
       <svg width="10" height="10"><circle cx="1" cy="1" r="1"/></svg>
     </g>
+    </g>
   </svg>
 </svg>)svg";
+
+const juce::XmlElement* staffOf(const juce::XmlElement& svg)
+{
+    return svg.getChildByName("g")->getChildByName("g")->getChildByName("g");
+}
 
 TEST(SvgForJuceTest, FNA01_TextThatIsNoSvgGivesNothing)
 {
@@ -50,7 +58,7 @@ TEST(SvgForJuceTest, FNA01_GlyphsAreCopiedToWhereTheyAreUsed)
 
     EXPECT_EQ(svg->getChildByName("defs"), nullptr);
     EXPECT_EQ(svg->getChildByName("style"), nullptr);
-    const auto* staff = svg->getChildByName("g")->getChildByName("g");
+    const auto* staff = staffOf(*svg);
     const auto* glyph = staff->getChildElement(3);
     EXPECT_EQ(glyph->getTagName(), "g");
     EXPECT_FALSE(glyph->hasAttribute("xlink:href"));
@@ -81,23 +89,41 @@ TEST(SvgForJuceTest, FNA01_LinesShapesAndTextGetTheInk)
     const auto svg = svgForJuce(kVerovioSvg, "#112233");
     ASSERT_NE(svg, nullptr);
 
-    const auto* staff = svg->getChildByName("g")->getChildByName("g");
+    const auto* staff = staffOf(*svg);
     EXPECT_EQ(staff->getChildElement(0)->getStringAttribute("stroke"), "#112233");
     EXPECT_EQ(staff->getChildElement(0)->getStringAttribute("fill"), "#112233");
     EXPECT_EQ(staff->getChildElement(1)->getStringAttribute("stroke"), "red");
     EXPECT_EQ(staff->getChildElement(1)->getStringAttribute("fill"), "none");
     EXPECT_EQ(staff->getChildElement(2)->getStringAttribute("fill"), "#112233");
-    const auto* fret = staff->getChildElement(5);
+    const auto* fret = svg->getChildByName("text");
+    ASSERT_NE(fret, nullptr);
     EXPECT_EQ(fret->getStringAttribute("fill"), "#112233");
     EXPECT_FALSE(fret->hasAttribute("font-size"));
-    EXPECT_EQ(fret->getChildByName("tspan")->getStringAttribute("font-size"), "324px");
-    EXPECT_EQ(staff->getChildElement(6)->getStringAttribute("fill"), "blue");
-    for (int index = 7; index < 10; ++index)
+    EXPECT_EQ(fret->getNextElementWithTagName("text")->getStringAttribute("fill"), "blue");
+    for (int index = 5; index < 8; ++index)
         EXPECT_EQ(staff->getChildElement(index)->getStringAttribute("stroke"), "#112233");
     // Only the inner svg with Verovio's viewBox is scaled; other elements keep their colours.
-    const auto* nested = staff->getChildElement(10);
+    const auto* nested = staff->getChildElement(8);
     EXPECT_EQ(nested->getTagName(), "svg");
     EXPECT_FALSE(nested->getChildElement(0)->hasAttribute("fill"));
+}
+
+TEST(SvgForJuceTest, FNA01_TextMovesOutOfTheGroupsWithItsPositionAndSizeTransformed)
+{
+    const auto svg = svgForJuce(kVerovioSvg, "#112233");
+    ASSERT_NE(svg, nullptr);
+
+    EXPECT_EQ(staffOf(*svg)->getChildByName("text"), nullptr);
+    const auto* fret = svg->getChildByName("text");
+    ASSERT_NE(fret, nullptr);
+    // Scaled by 0.1 after the page margin of 500.
+    EXPECT_DOUBLE_EQ(fret->getDoubleAttribute("x"), 51.0);
+    EXPECT_DOUBLE_EQ(fret->getDoubleAttribute("y"), 52.0);
+    EXPECT_EQ(fret->getChildByName("tspan")->getStringAttribute("font-size"), "32.4px");
+    EXPECT_EQ(fret->getChildByName("tspan")->getAllSubText(), "5");
+    const auto* other = fret->getNextElementWithTagName("text");
+    ASSERT_NE(other, nullptr);
+    EXPECT_FALSE(other->hasAttribute("font-size"));
 }
 
 /// Elements of the tree that JUCE cannot draw.
