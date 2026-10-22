@@ -35,3 +35,5 @@ src/engine/MonitorSource.h      # only an enum, no executable lines
 src/app/TranscriptionThread.h  # juce::Thread running transcription::transcribe, logic in ui::TranscriptionController
 src/app/TranscriptionThread.cpp # juce::Thread running transcription::transcribe, logic in ui::TranscriptionController
 src/cli/TranscribeMain.cpp      # main of scratchnotes-transcribe: reads WAV files with JUCE and writes the results, logic in transcription/
+src/app/ScoreView.h             # JUCE score view: draws the pages of ui::scorePages
+src/app/ScoreView.cpp           # JUCE score view: draws the pages of ui::scorePages

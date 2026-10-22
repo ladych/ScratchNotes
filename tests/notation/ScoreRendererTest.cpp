@@ -11,6 +11,7 @@ namespace
 {
 
 using ::testing::HasSubstr;
+using ::testing::Not;
 
 /// One bar of E-guitar in standard tuning as notes and tablature: open low E, then fret 2 on the A string.
 const std::string kGuitarBar = R"(<?xml version="1.0" encoding="UTF-8"?>
@@ -78,6 +79,18 @@ TEST(ScoreRendererTest, FNA01_TextThatIsNoScoreIsNotLoaded)
 
     EXPECT_EQ(renderer.load("keine Noten"), std::nullopt);
     EXPECT_EQ(renderer.page(1), "");
+}
+
+TEST(ScoreRendererTest, FNA01_PagesHaveTheChosenWidthAndNoFooter)
+{
+    ScoreRenderer renderer{SNOTES_VEROVIO_DATA_DIR};
+
+    renderer.setPageWidth(1200);
+    ASSERT_EQ(renderer.load(kGuitarBar), 1);
+    const auto svg = renderer.page(1);
+
+    EXPECT_THAT(svg, HasSubstr("width=\"1200px\""));
+    EXPECT_THAT(svg, Not(HasSubstr("pgFoot")));
 }
 
 TEST(ScoreRendererTest, FNA01_WithoutFontsNothingIsDrawn)

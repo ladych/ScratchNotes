@@ -184,6 +184,13 @@ countries: de at ch li lu be
 " (%1 more)" = " (%1 weitere)"
 " · %1 notes" = " · %1 Noten"
 
+"Tracks" = "Spuren"
+"Both" = "Beides"
+"Show the tracks with their waveforms" = "Die Spuren mit ihren Wellenformen zeigen"
+"Show the score with notes and tablature" = "Die Partitur mit Noten und Tabulatur zeigen"
+"Show tracks and score side by side" = "Spuren und Partitur nebeneinander zeigen"
+"No notes yet. They appear when the note detection is done." = "Noch keine Noten. Sie erscheinen, sobald die Notenerkennung fertig ist."
+
 # JUCE
 # Texte von JUCE selbst (Audio/MIDI-Einstellungen, Dateiauswahl), nicht im Code von Scratch Notes.
 "(no audio input channels found)" = "(keine Audio-Eingangskanäle gefunden)"

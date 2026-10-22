@@ -3,6 +3,8 @@
 #include "model/ModelIds.h"
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <utility>
 
 namespace snotes::model
@@ -401,6 +403,20 @@ Mix Project::mix() const
 BeatGrid Project::beatGrid() const
 {
     return BeatGrid{child(ids::beatGrid)};
+}
+
+Project::View Project::view() const
+{
+    const auto name = getString(ids::view);
+    if (name == "tracks")
+        return View::tracks;
+    return name == "notes" ? View::notes : View::both;
+}
+
+void Project::setView(View view)
+{
+    constexpr std::array<const char*, 3> kNames{"tracks", "notes", "both"};
+    mutableTree().setProperty(ids::view, kNames.at(static_cast<std::size_t>(view)), nullptr);
 }
 
 juce::ValueTree Project::child(const juce::Identifier& type) const

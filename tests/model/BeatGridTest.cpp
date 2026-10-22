@@ -68,6 +68,20 @@ TEST_F(BeatGridTest, FTX06_ANewAnalysisReplacesTheOldOne)
     EXPECT_EQ(project.beatGrid().source(), "");
 }
 
+TEST_F(BeatGridTest, FNA02_KeepsTheScoreUntilTheGridIsCleared)
+{
+    auto grid = project.beatGrid();
+    grid.setAnalysis({1, 2}, {{.numerator = 3, .confidence = 1.0, .phase = 1}});
+    EXPECT_EQ(grid.scoreFile(), "");
+
+    grid.setScoreFile("score.musicxml");
+    EXPECT_EQ(grid.scoreFile(), "score.musicxml");
+    EXPECT_FALSE(undoManager.canUndo());
+
+    grid.clear();
+    EXPECT_EQ(grid.scoreFile(), "");
+}
+
 TEST_F(BeatGridTest, FTX06_ReadingsDifferInEveryField)
 {
     const MeterReading reading{.numerator = 4, .confidence = 0.5, .phase = 1};

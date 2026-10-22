@@ -144,6 +144,14 @@ public:
 class Project : public TreeNode
 {
 public:
+    /// What the main window shows (GUI-Entwurf v0.1, item 2).
+    enum class View : std::uint8_t
+    {
+        tracks,
+        notes,
+        both
+    };
+
     Project(juce::ValueTree tree, juce::UndoManager* undoManager);
 
     [[nodiscard]] std::string name() const;
@@ -157,6 +165,10 @@ public:
     void removeVoice(int index);
 
     [[nodiscard]] Mix mix() const;
+    /// Saved with the project, but not undoable: it is no edit of the music. Both views by default.
+    [[nodiscard]] View view() const;
+    void setView(View view);
+
     /// The beat grid of all voices; changes to it are not undoable, like the notes.
     [[nodiscard]] BeatGrid beatGrid() const;
 

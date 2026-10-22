@@ -29,6 +29,9 @@ add_executable(snotes_tests
     model/TreeChangeListenerTest.cpp
     model/UuidGeneratorTest.cpp
     notation/ScoreRendererTest.cpp
+    notation/MusicXmlTest.cpp
+    notation/ScoreTest.cpp
+    notation/SvgForJuceTest.cpp
     rhythm/BeatTrackerTest.cpp
     rhythm/CleanUpTest.cpp
     rhythm/MeterTest.cpp
@@ -56,6 +59,7 @@ add_executable(snotes_tests
     ui/LevelMeterTest.cpp
     ui/RecordingControllerTest.cpp
     ui/RhythmUpdateTest.cpp
+    ui/ScoreDisplayTest.cpp
     ui/TakeAudioCacheTest.cpp
     ui/ThemeSettingTest.cpp
     ui/TrackListTest.cpp
