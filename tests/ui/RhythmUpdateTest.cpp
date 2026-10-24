@@ -155,6 +155,29 @@ TEST_F(RhythmUpdateTest, FTX09_ReportsEventsThatCannotBeWritten)
     EXPECT_EQ(project.voice(0).take(1).eventsFile(), "");
 }
 
+TEST_F(RhythmUpdateTest, FNA02_WritesTheScoreOfAllVoicesInTheChosenMeter)
+{
+    ASSERT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+
+    EXPECT_EQ(project.beatGrid().scoreFile(), "score.musicxml");
+    const auto& score = files.at(folder / "score.musicxml");
+    EXPECT_NE(score.find("<part-name>Bass</part-name>"), std::string::npos);
+    EXPECT_NE(score.find("<beats>4</beats>"), std::string::npos);
+    EXPECT_NE(score.find("<sign>F</sign>"), std::string::npos);
+    EXPECT_NE(score.find("<staff-lines>5</staff-lines>"), std::string::npos);
+    // Only voices with an analysed take are in the score.
+    EXPECT_EQ(score.find("Gitarre"), std::string::npos);
+}
+
+TEST_F(RhythmUpdateTest, FNA02_ReportsAScoreThatCannotBeWritten)
+{
+    EXPECT_CALL(fileSystem, writeText(_, _)).WillRepeatedly(Return(true));
+    EXPECT_CALL(fileSystem, writeText(folder / "score.musicxml", _)).WillOnce(Return(false));
+
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::writeFailed);
+    EXPECT_EQ(project.beatGrid().scoreFile(), "");
+}
+
 TEST_F(RhythmUpdateTest, FTX06_SummaryNeedsBeatsAndAMeter)
 {
     project.beatGrid().setAnalysis({0, 24000, 48000}, {});

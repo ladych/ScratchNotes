@@ -44,6 +44,16 @@ int BeatGrid::downbeatPhase() const
     return getInt(ids::downbeatPhase, 0);
 }
 
+std::string BeatGrid::scoreFile() const
+{
+    return getString(ids::scoreFile);
+}
+
+void BeatGrid::setScoreFile(const std::string& file)
+{
+    setString(ids::scoreFile, file);
+}
+
 void BeatGrid::setAnalysis(const std::vector<std::int64_t>& beats, const std::vector<MeterReading>& readings)
 {
     clear();

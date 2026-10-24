@@ -43,6 +43,23 @@ TEST_F(ProjectTest, FPJ01_NewProjectHasNameSampleRateAndNoVoices)
     EXPECT_TRUE(tree.getChildWithName(ids::beatGrid).isValid());
 }
 
+TEST_F(ProjectTest, FNA02_TheViewIsSavedWithoutUndo)
+{
+    EXPECT_EQ(project.view(), Project::View::both);
+
+    project.setView(Project::View::notes);
+    EXPECT_EQ(project.view(), Project::View::notes);
+    EXPECT_EQ(tree[ids::view].toString(), "notes");
+    project.setView(Project::View::tracks);
+    EXPECT_EQ(project.view(), Project::View::tracks);
+    project.setView(Project::View::both);
+    EXPECT_EQ(project.view(), Project::View::both);
+    EXPECT_FALSE(undoManager.canUndo());
+
+    tree.setProperty(ids::view, "unbekannt", nullptr);
+    EXPECT_EQ(project.view(), Project::View::both);
+}
+
 TEST_F(ProjectTest, FPJ01_RenamesTheProject)
 {
     project.setName("Probe Dienstag");

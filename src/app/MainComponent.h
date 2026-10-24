@@ -1,8 +1,10 @@
 #pragma once
 
 #include "app/AudioDeviceSupervisor.h"
+#include "app/ScoreView.h"
 #include "app/Theme.h"
 #include "app/TrackView.h"
+#include "model/Project.h"
 #include "ui/TrackList.h"
 #include "ui/TransportControl.h"
 
@@ -15,9 +17,10 @@ namespace snotes::app
 {
 
 /// Humble object (E-03): the main window. A top bar with "+" (add a voice), the transport (back to the
-/// start, Play/Stop, Rec, position) and the click with its tempo; the track view (AP2) and the status line
-/// with driver, buffer and latency (Q-02) and the progress of the note detection (F-TX-01). Test tone, audio
-/// settings and latency compensation are in the menu.
+/// start, Play/Stop, Rec, position), the choice of the view (tracks, notes or both) and the click with its
+/// tempo; the track view (AP2) and the score view (AP7) side by side and the status line with driver, buffer
+/// and latency (Q-02) and the progress of the note detection (F-TX-01). Test tone, audio settings and latency
+/// compensation are in the menu.
 class MainComponent final : public juce::Component, private juce::ChangeListener, private juce::Timer
 {
 public:
@@ -40,6 +43,8 @@ private:
     void timerCallback() override;
     void setUpTransport();
     void setUpClick();
+    void setUpViews();
+    void showView();
     void showTransportState();
     void showClick();
 
@@ -50,6 +55,9 @@ private:
     juce::TextButton playButton_;
     juce::TextButton recordButton_;
     juce::Label position_;
+    juce::TextButton tracksButton_;
+    juce::TextButton notesButton_;
+    juce::TextButton bothButton_;
     juce::TextButton clickButton_;
     juce::Slider clickTempo_;
     ui::RecordingController& recording_;
@@ -58,6 +66,8 @@ private:
     ui::TrackEditor& editor_;
     juce::ValueTree project_;
     TrackView tracks_;
+    ScoreView score_;
+    model::Project::View shownView_ = model::Project::View::both;
     theme::DimLabel status_;
     juce::TooltipWindow tooltips_{this};
 };

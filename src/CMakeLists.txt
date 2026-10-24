@@ -29,7 +29,10 @@ add_library(snotes_core STATIC
     model/TreeChangeListener.cpp
     model/TreeNode.cpp
     model/UuidGenerator.cpp
+    notation/MusicXml.cpp
+    notation/Score.cpp
     notation/ScoreRenderer.cpp
+    notation/SvgForJuce.cpp
     rhythm/BeatTracker.cpp
     rhythm/CleanUp.cpp
     rhythm/Fft.cpp
@@ -60,6 +63,7 @@ add_library(snotes_core STATIC
     ui/RecordingController.cpp
     ui/RecordingTime.cpp
     ui/RhythmUpdate.cpp
+    ui/ScoreDisplay.cpp
     ui/TakeAudioCache.cpp
     ui/ThemeSetting.cpp
     ui/TrackList.cpp
@@ -87,6 +91,7 @@ set(SNOTES_APP_SOURCES
     app/LatencyDialog.cpp
     app/MainComponent.cpp
     app/MainMenu.cpp
+    app/ScoreView.cpp
     app/TrackView.cpp
     app/TranscriptionThread.cpp
     app/WriterThread.cpp
