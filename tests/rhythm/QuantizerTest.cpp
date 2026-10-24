@@ -39,6 +39,7 @@ protected:
         const auto notes = test::readNotes(GetParam());
         auto rules = rulesFor(guessStyle(notes).style);
         rules.dropGhostsUnderRinging = false;
+        rules.dropOctaveGhosts = false;
         const auto beats = test::readBeats(GetParam(), true);
         return quantize(cleanUp(clusterOnsets(notes, rules.relativeAmplitude),
                                 test::readFloats(GetParam() + "-oenv256.f32"),

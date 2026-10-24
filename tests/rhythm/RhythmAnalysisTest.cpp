@@ -39,7 +39,8 @@ TEST_P(RhythmAnalysisReferenceTest, E12_TheWholePipelineMatchesThePoc)
     EXPECT_THAT(grid->beats, Pointwise(DoubleNear(1e-6), test::readBeats(GetParam(), true)));
     EXPECT_EQ(grid->meter.ranking.front().beatsPerBar,
               std::stoi(test::readTextRows(GetParam() + "-meter.csv")[0][0]));
-    const auto rhythm = voiceRhythm(track, *grid, {.dropGhostsUnderRinging = false});
+    const auto rhythm =
+        voiceRhythm(track, *grid, {.dropGhostsUnderRinging = false, .dropOctaveGhosts = false});
     const auto events = test::readTextRows(GetParam() + "-events.csv");
     ASSERT_EQ(rhythm.quantization.events.size(), events.size());
     for (std::size_t index = 0; index < events.size(); ++index)

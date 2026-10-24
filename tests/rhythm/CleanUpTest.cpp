@@ -148,6 +148,23 @@ TEST(CleanUpTest, FTX07_KeepsANoteAboveAHeldOne)
                 ElementsAre(ElementsAre(41), ElementsAre(48)));
 }
 
+TEST(CleanUpTest, FTX07_DropsOctaveGhostsAboveSingleNotesOfAMelody)
+{
+    // The DI of the low strings: A#1 with its octave and the octave above that, F2 with its octave.
+    const std::vector<Note> notes{note(1.0, 0.5, 34),
+                                  note(1.0, 0.5, 46),
+                                  note(1.0, 0.5, 58),
+                                  note(2.0, 0.5, 41),
+                                  note(2.0, 0.5, 53),
+                                  note(3.0, 0.5, 41),
+                                  note(3.0, 0.5, 48)};
+    EXPECT_THAT(pitchesOf(cleaned(notes, Style::melody)),
+                ElementsAre(ElementsAre(34), ElementsAre(41), ElementsAre(41, 48)));
+    // A power chord with its octave stays whole.
+    EXPECT_THAT(pitchesOf(cleaned({note(1.0, 0.5, 34), note(1.0, 0.5, 46)}, Style::riff)),
+                ElementsAre(ElementsAre(34, 46)));
+}
+
 TEST(CleanUpTest, FTX07_StyleFromTheShareOfChords)
 {
     EXPECT_EQ(guessStyle({}), StyleGuess{});
@@ -163,9 +180,11 @@ TEST(CleanUpTest, FTX07_RulesOfThePoc)
     EXPECT_DOUBLE_EQ(rulesFor(Style::riff).graceBeats, 0.35);
     EXPECT_FALSE(rulesFor(Style::melody).mergeLateNotes);
     EXPECT_DOUBLE_EQ(rulesFor(Style::melody).graceWeightRatio, 0.5);
-    // Beyond the PoC, on for both styles.
+    // Beyond the PoC: ghosts under ringing notes for both styles, octave ghosts for melody.
     EXPECT_TRUE(rulesFor(Style::riff).dropGhostsUnderRinging);
     EXPECT_TRUE(rulesFor(Style::melody).dropGhostsUnderRinging);
+    EXPECT_FALSE(rulesFor(Style::riff).dropOctaveGhosts);
+    EXPECT_TRUE(rulesFor(Style::melody).dropOctaveGhosts);
 }
 
 } // namespace

@@ -69,6 +69,10 @@ struct CleanUpRules
     /// Not in the PoC: a cluster without attack whose notes all lie below a ringing note or in its pitch
     /// classes is a ghost of the model (subharmonics on the 7-string, notes split at its window seams).
     bool dropGhostsUnderRinging = true;
+    /// Not in the PoC: a strike of one note and its octaves (one or two above) keeps only that note. The low
+    /// strings of the DI have an octave overtone as loud as the fundamental, which the model reports as a
+    /// note. Only for melody, since riffs play real octaves; chords with other intervals stay whole.
+    bool dropOctaveGhosts = false;
 };
 
 [[nodiscard]] CleanUpRules rulesFor(Style style);
