@@ -102,6 +102,28 @@ void storeGrid(model::BeatGrid grid, const rhythm::BeatGrid& analysis, double sa
     grid.setAnalysis(beats, readings);
 }
 
+/// The grid the user edited (F-KO-02) or, if there is none, a new analysis of the tracks, stored in the
+/// project. Nothing without tracks or beats.
+std::optional<rhythm::BeatGrid> gridOf(const model::Project& project,
+                                       const std::vector<rhythm::RhythmTrack>& tracks)
+{
+    const auto stored = project.beatGrid();
+    const auto beats = stored.beats();
+    const bool edited = stored.isEdited();
+    if (!tracks.empty() && edited && beats.size() > 1)
+    {
+        rhythm::BeatGrid grid;
+        grid.beats.reserve(beats.size());
+        for (const auto beat : beats)
+            grid.beats.push_back(static_cast<double>(beat) / project.sampleRate());
+        return grid;
+    }
+    auto analysis = rhythm::commonBeatGrid(tracks, rhythm::BeatTrackerSettings{});
+    if (analysis)
+        storeGrid(stored, *analysis, project.sampleRate());
+    return analysis;
+}
+
 /// The events of the take with their tablature next to its DI file; they go into the score. Nothing if the
 /// file cannot be written.
 std::optional<notation::VoiceEvents> writeEvents(Analysed& analysed,
@@ -165,14 +187,13 @@ updateRhythm(juce::ValueTree project, io::IFileSystem& fileSystem, const std::fi
     tracks.reserve(takes.size());
     for (const auto& analysed : takes)
         tracks.push_back(analysed.track);
-    const auto grid = rhythm::commonBeatGrid(tracks, rhythm::BeatTrackerSettings{});
+    const auto grid = gridOf(model, tracks);
     if (!grid)
     {
         model.beatGrid().clear();
         return RhythmUpdate::noGrid;
     }
     const auto& analysis = *grid;
-    storeGrid(model.beatGrid(), analysis, model.sampleRate());
     std::vector<notation::VoiceEvents> voices;
     voices.reserve(takes.size());
     for (auto& analysed : takes)
@@ -193,16 +214,20 @@ std::string beatGridSummary(const juce::ValueTree& project)
     const auto grid = model.beatGrid();
     const auto beats = grid.beats();
     const auto readings = grid.meterReadings();
-    if (beats.size() < 2 || readings.empty())
+    if (beats.size() < 2 || grid.chosenMeter() == 0)
         return {};
     std::vector<double> tempo;
     for (std::size_t beat = 1; beat < beats.size(); ++beat)
         tempo.push_back(60.0 * model.sampleRate() / static_cast<double>(beats[beat] - beats[beat - 1]));
-    const auto& best = readings.front();
+    const auto bpm = std::to_string(std::lround(rhythm::median(tempo)));
+    const auto meter = std::to_string(grid.chosenMeter());
+    if (grid.isEdited())
+        return i18n::tr("Beat grid: %1 BPM, %2/4, edited", bpm, meter);
+    // Without a correction the meter is the most likely reading.
     return i18n::tr("Beat grid: %1 BPM, %2/4 (%3 %)",
-                    std::to_string(std::lround(rhythm::median(tempo))),
-                    std::to_string(best.numerator),
-                    std::to_string(std::lround(best.confidence * 100.0)));
+                    bpm,
+                    meter,
+                    std::to_string(std::lround(readings.front().confidence * 100.0)));
 }
 
 std::vector<BeatLine> beatLines(const juce::ValueTree& project)

@@ -2,6 +2,7 @@
 
 #include "engine/InputMeter.h"
 #include "model/TreeChangeListener.h"
+#include "ui/GridCorrection.h"
 #include "ui/LevelMeter.h"
 #include "ui/RecordingController.h"
 #include "ui/RhythmUpdate.h"
@@ -13,6 +14,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <array>
+#include <cstddef>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -30,6 +32,7 @@ struct TrackViewContext
     ui::TrackEditor& editor;
     ui::RecordingController& recording;
     ui::TranscriptionController& transcription;
+    ui::GridCorrection& grid;
     ui::TransportControl& transport;
     engine::InputMeter& meter;
     /// Names of the inputs of the open device.
@@ -39,6 +42,32 @@ struct TrackViewContext
 };
 
 class TrackRowComponent;
+class TrackView;
+
+/// The beat grid above the waveforms (F-KO-02): a drag moves a beat, a double click inserts one, the context
+/// menu deletes a beat or starts a bar on it; a click beside the beats moves the song position.
+class BeatRuler final : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    explicit BeatRuler(TrackView& view);
+
+    void paint(juce::Graphics& g) override;
+    void mouseMove(const juce::MouseEvent& event) override;
+    void mouseDown(const juce::MouseEvent& event) override;
+    void mouseDrag(const juce::MouseEvent& event) override;
+    void mouseUp(const juce::MouseEvent& event) override;
+    void mouseDoubleClick(const juce::MouseEvent& event) override;
+
+private:
+    [[nodiscard]] double secondsAt(float x) const;
+    [[nodiscard]] float xFor(double seconds) const;
+    [[nodiscard]] std::optional<std::size_t> beatAt(float x) const;
+    void showMenu(std::optional<std::size_t> beat, double seconds);
+
+    TrackView& view_;
+    std::optional<std::size_t> dragged_;
+    float dragX_ = 0.0F;
+};
 
 /// Humble object (E-03): the track view (GUI-Entwurf v0.1, items 5, 6 and 8). One row per voice with name,
 /// instrument profile, take choice, inputs, R/M/S/I, volume, input meters and the waveforms of the active
@@ -71,6 +100,8 @@ public:
     [[nodiscard]] double positionSeconds() const { return context_.transport.positionSeconds(); }
     /// The common beat grid drawn behind the waveforms (F-NA-03).
     [[nodiscard]] const std::vector<ui::BeatLine>& beatLines() const { return beatLines_; }
+    /// Where the waveforms start in the width of the view.
+    [[nodiscard]] static int lanesLeft();
 
 private:
     void timerCallback() override;
@@ -82,6 +113,7 @@ private:
     juce::AudioThumbnailCache thumbnails_;
     std::array<ui::LevelMeter, engine::InputMeter::kMaxInputs> levels_{};
     std::vector<ui::BeatLine> beatLines_;
+    BeatRuler ruler_;
     juce::Viewport viewport_;
     juce::Component content_;
     juce::Label empty_;

@@ -58,6 +58,7 @@ add_library(snotes_core STATIC
     ui/AboutInfo.cpp
     ui/AudioStatus.cpp
     ui/DocumentController.cpp
+    ui/GridCorrection.cpp
     ui/LatencyCalibration.cpp
     ui/LatencyCompensation.cpp
     ui/LevelMeter.cpp

@@ -20,6 +20,7 @@
 #include "model/SnapshotPublisher.h"
 #include "model/UuidGenerator.h"
 #include "ui/DocumentController.h"
+#include "ui/GridCorrection.h"
 #include "ui/LatencyCalibration.h"
 #include "ui/LatencyCompensation.h"
 #include "ui/RecordingController.h"
@@ -103,6 +104,8 @@ private:
     // Note detection (AP4): one take after the other on its own thread.
     TranscriptionThread transcriptionThread_;
     ui::TranscriptionController transcription_;
+    // Correction (AP9): the beat grid of all voices.
+    ui::GridCorrection gridCorrection_;
     // Export (AP8): the score files of the last note detection, copied where the user wants them.
     ui::ScoreExport scoreExport_;
     // Recording (AP2): the audio thread fills the session's rings, the writer thread writes the files.

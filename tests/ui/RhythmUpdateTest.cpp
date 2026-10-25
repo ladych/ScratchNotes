@@ -211,6 +211,30 @@ TEST_F(RhythmUpdateTest, FNA02_ReportsAScoreThatCannotBeWritten)
     EXPECT_EQ(project.beatGrid().scoreFile(), "");
 }
 
+TEST_F(RhythmUpdateTest, FKO02_AnEditedGridIsKeptWhileItHasBeats)
+{
+    project.beatGrid().setEdited({48000, 72000, 96000, 120000}, 3, 1);
+
+    ASSERT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+    EXPECT_THAT(project.beatGrid().beats(), ::testing::ElementsAre(48000, 72000, 96000, 120000));
+    EXPECT_TRUE(project.beatGrid().isEdited());
+
+    // A single beat is no grid: the beats are detected again.
+    project.beatGrid().setEdited({48000}, 3, 1);
+    ASSERT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+    EXPECT_FALSE(project.beatGrid().isEdited());
+    EXPECT_GT(project.beatGrid().beats().size(), 4U);
+}
+
+TEST_F(RhythmUpdateTest, FKO02_WithoutNotesEvenAnEditedGridGoes)
+{
+    project.voice(0).take(1).setNotes("", 0);
+    project.beatGrid().setEdited({48000, 72000}, 3, 1);
+
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::noGrid);
+    EXPECT_TRUE(project.beatGrid().beats().empty());
+}
+
 TEST_F(RhythmUpdateTest, FTX06_SummaryNeedsBeatsAndAMeter)
 {
     project.beatGrid().setAnalysis({0, 24000, 48000}, {});
@@ -219,6 +243,8 @@ TEST_F(RhythmUpdateTest, FTX06_SummaryNeedsBeatsAndAMeter)
     EXPECT_EQ(beatGridSummary(tree), "");
     project.beatGrid().setAnalysis({0, 24000, 48000}, {{.numerator = 3, .confidence = 0.5, .phase = 0}});
     EXPECT_EQ(beatGridSummary(tree), "Beat-Raster: 120 BPM, 3/4-Takt (50 %)");
+    project.beatGrid().setEdited({0, 24000, 48000}, 4, 0);
+    EXPECT_EQ(beatGridSummary(tree), "Beat-Raster: 120 BPM, 4/4-Takt, bearbeitet");
 }
 
 TEST_F(RhythmUpdateTest, FNA03_BeatLinesMarkTheFirstBeatOfEachBar)

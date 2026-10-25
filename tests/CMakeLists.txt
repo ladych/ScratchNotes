@@ -55,6 +55,7 @@ add_executable(snotes_tests
     ui/AboutInfoTest.cpp
     ui/AudioStatusTest.cpp
     ui/DocumentControllerTest.cpp
+    ui/GridCorrectionTest.cpp
     ui/LatencyCalibrationTest.cpp
     ui/LatencyCompensationTest.cpp
     ui/LevelMeterTest.cpp

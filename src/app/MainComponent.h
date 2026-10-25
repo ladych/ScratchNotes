@@ -44,9 +44,12 @@ private:
     void setUpTransport();
     void setUpClick();
     void setUpViews();
+    void setUpMeter();
+    void layOutBar(juce::Rectangle<int> bar);
     void showView();
     void showTransportState();
     void showClick();
+    void showMeters();
 
     juce::AudioDeviceManager& deviceManager_;
     const AudioDeviceSupervisor& deviceSupervisor_;
@@ -58,12 +61,15 @@ private:
     juce::TextButton tracksButton_;
     juce::TextButton notesButton_;
     juce::TextButton bothButton_;
+    juce::ComboBox meter_;
+    std::vector<ui::MeterChoice> shownMeters_;
     juce::TextButton clickButton_;
     juce::Slider clickTempo_;
     ui::RecordingController& recording_;
     ui::TranscriptionController& transcription_;
     ui::TransportControl& transport_;
     ui::TrackEditor& editor_;
+    ui::GridCorrection& grid_;
     juce::ValueTree project_;
     TrackView tracks_;
     ScoreView score_;

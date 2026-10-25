@@ -7,6 +7,18 @@
 
 namespace snotes::model
 {
+namespace
+{
+
+std::string textOf(const std::vector<std::int64_t>& beats)
+{
+    std::ostringstream text;
+    for (const auto beat : beats)
+        text << (text.tellp() == 0 ? "" : " ") << beat;
+    return text.str();
+}
+
+} // namespace
 
 BeatGrid::BeatGrid(juce::ValueTree tree) : TreeNode(std::move(tree), nullptr) {}
 
@@ -57,11 +69,8 @@ void BeatGrid::setScoreFile(const std::string& file)
 void BeatGrid::setAnalysis(const std::vector<std::int64_t>& beats, const std::vector<MeterReading>& readings)
 {
     clear();
-    std::ostringstream text;
-    for (const auto beat : beats)
-        text << (text.tellp() == 0 ? "" : " ") << beat;
-    setString(ids::beats, text.str());
-    setString(ids::source, "auto");
+    setString(ids::beats, textOf(beats));
+    setString(ids::source, kAnalysed);
     for (const auto& reading : readings)
     {
         juce::ValueTree child{ids::meterReading};
@@ -75,6 +84,14 @@ void BeatGrid::setAnalysis(const std::vector<std::int64_t>& beats, const std::ve
         set(ids::chosenMeter, readings.front().numerator);
         set(ids::downbeatPhase, readings.front().phase);
     }
+}
+
+void BeatGrid::setEdited(const std::vector<std::int64_t>& beats, int meter, int phase)
+{
+    setString(ids::beats, textOf(beats));
+    setString(ids::source, kEdited);
+    set(ids::chosenMeter, meter);
+    set(ids::downbeatPhase, phase);
 }
 
 void BeatGrid::clear()
