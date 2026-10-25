@@ -57,6 +57,10 @@ struct Score
     /// Full bars after the upbeat.
     int bars = 0;
     std::vector<ScoreVoice> voices;
+    /// Where the score starts on the beat grid, in ticks from its first beat; a whole number of beats.
+    std::int64_t originTick = 0;
+    /// Tempo for players such as MuseScore (F-EX-02), beats per minute; 0 for none.
+    double bpm = 0.0;
 
     [[nodiscard]] std::int64_t barTicks() const { return beatsPerBar * kTicksPerBeat; }
 

@@ -420,7 +420,20 @@ void addAttributes(juce::XmlElement& measure, const Score& score, const ScoreVoi
     addTuning(*attributes, voice.fretboard);
 }
 
-void writeMeasure(juce::XmlElement& part, const Score& score, const ScoreVoice& voice, const Measure& measure)
+/// A metronome mark for the reader and a tempo for players (F-EX-02).
+void addTempo(juce::XmlElement& measure, double bpm)
+{
+    auto* direction = measure.createNewChildElement("direction");
+    direction->setAttribute("placement", "above");
+    auto* metronome = direction->createNewChildElement("direction-type")->createNewChildElement("metronome");
+    addText(*metronome, "beat-unit", "quarter");
+    addText(*metronome, "per-minute", juce::String{juce::roundToInt(bpm)});
+    direction->createNewChildElement("sound")->setAttribute("tempo", juce::String{bpm, 2});
+}
+
+/// bpm is the tempo to mark at the start, 0 for none.
+void writeMeasure(
+    juce::XmlElement& part, const Score& score, const ScoreVoice& voice, const Measure& measure, double bpm)
 {
     auto* element = part.createNewChildElement("measure");
     element->setAttribute("number", measure.number);
@@ -428,6 +441,8 @@ void writeMeasure(juce::XmlElement& part, const Score& score, const ScoreVoice& 
         element->setAttribute("implicit", "yes");
     if (measure.start == 0)
         addAttributes(*element, score, voice);
+    if (measure.start == 0 && bpm > 0.0)
+        addTempo(*element, bpm);
     const auto pieces = piecesOf(segmentsOf(voice.events, measure), measure);
     for (const auto& piece : pieces)
         writePiece(*element, piece, {.number = 1, .strings = voice.fretboard.strings.size()});
@@ -472,7 +487,7 @@ std::string toMusicXml(const Score& score)
         auto* part = root.createNewChildElement("part");
         part->setAttribute("id", id);
         for (const auto& measure : measures)
-            writeMeasure(*part, score, voice, measure);
+            writeMeasure(*part, score, voice, measure, index == 0 ? score.bpm : 0.0);
     }
     juce::XmlElement::TextFormat format;
     format.dtd = "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 4.0 Partwise//EN\" "

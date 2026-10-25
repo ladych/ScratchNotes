@@ -31,6 +31,7 @@ add_library(snotes_core STATIC
     model/UuidGenerator.cpp
     notation/MusicXml.cpp
     notation/Score.cpp
+    notation/ScoreMidi.cpp
     notation/ScoreRenderer.cpp
     notation/SvgForJuce.cpp
     rhythm/BeatTracker.cpp
@@ -64,6 +65,7 @@ add_library(snotes_core STATIC
     ui/RecordingTime.cpp
     ui/RhythmUpdate.cpp
     ui/ScoreDisplay.cpp
+    ui/ScoreExport.cpp
     ui/TakeAudioCache.cpp
     ui/ThemeSetting.cpp
     ui/TrackList.cpp

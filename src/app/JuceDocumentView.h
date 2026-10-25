@@ -29,11 +29,15 @@ public:
                            ui::PathChosenCallback onChosen) override;
     void chooseProjectFolder(const std::filesystem::path& suggestedFolder,
                              ui::PathChosenCallback onChosen) override;
+    void chooseExportFile(const std::filesystem::path& suggestedFile,
+                          const std::string& pattern,
+                          ui::PathChosenCallback onChosen) override;
     void showMessage(const std::string& title, const std::string& message) override;
 
 private:
     void launchChooser(const juce::String& title,
                        const juce::File& start,
+                       const juce::String& pattern,
                        int flags,
                        ui::PathChosenCallback onChosen);
 

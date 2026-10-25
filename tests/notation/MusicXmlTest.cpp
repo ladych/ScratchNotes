@@ -358,6 +358,31 @@ TEST(MusicXmlTest, FNA02_EveryVoiceIsAPartWithTheSameBars)
     EXPECT_EQ(measure(*xml, 1, 0).getStringAttribute("number"), "1");
 }
 
+TEST(MusicXmlTest, FEX02_TheFirstPartStartsWithTheTempo)
+{
+    auto score = guitarScore({openLowE(0, 12)}, 12);
+    score.voices.push_back(score.voices.front());
+    score.bpm = 118.456;
+    auto xml = parse(score);
+    ASSERT_NE(xml, nullptr);
+
+    const auto* direction = measure(*xml, 0, 0).getChildByName("direction");
+    ASSERT_NE(direction, nullptr);
+    EXPECT_EQ(text(direction, "direction-type/metronome/beat-unit"), "quarter");
+    EXPECT_EQ(text(direction, "direction-type/metronome/per-minute"), "118");
+    EXPECT_EQ(direction->getChildByName("sound")->getStringAttribute("tempo"), "118.46");
+    EXPECT_EQ(measure(*xml, 0, 1).getChildByName("direction"), nullptr);
+    EXPECT_EQ(measure(*xml, 1, 0).getChildByName("direction"), nullptr);
+}
+
+TEST(MusicXmlTest, FEX02_NoTempoWithoutOne)
+{
+    auto xml = parse(guitarScore({openLowE(0, 48)}));
+    ASSERT_NE(xml, nullptr);
+
+    EXPECT_EQ(measure(*xml, 0, 0).getChildByName("direction"), nullptr);
+}
+
 TEST(MusicXmlTest, FNA01_VerovioDrawsTheScore)
 {
     const auto score = guitarScore(

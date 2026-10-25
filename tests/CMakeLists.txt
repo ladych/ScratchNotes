@@ -30,6 +30,7 @@ add_executable(snotes_tests
     model/UuidGeneratorTest.cpp
     notation/ScoreRendererTest.cpp
     notation/MusicXmlTest.cpp
+    notation/ScoreMidiTest.cpp
     notation/ScoreTest.cpp
     notation/SvgForJuceTest.cpp
     rhythm/BeatTrackerTest.cpp
@@ -60,6 +61,7 @@ add_executable(snotes_tests
     ui/RecordingControllerTest.cpp
     ui/RhythmUpdateTest.cpp
     ui/ScoreDisplayTest.cpp
+    ui/ScoreExportTest.cpp
     ui/TakeAudioCacheTest.cpp
     ui/ThemeSettingTest.cpp
     ui/TrackListTest.cpp

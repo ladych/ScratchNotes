@@ -42,6 +42,15 @@ public:
         onChosen(folderToSave);
     }
 
+    void chooseExportFile(const std::filesystem::path& suggestedFile,
+                          const std::string& pattern,
+                          PathChosenCallback onChosen) override
+    {
+        suggestedExports.push_back(suggestedFile);
+        exportPatterns.push_back(pattern);
+        onChosen(fileToExport);
+    }
+
     void showMessage(const std::string& title, const std::string& message) override
     {
         messages.push_back({title, message});
@@ -51,12 +60,15 @@ public:
     SaveChangesChoice saveChangesAnswer = SaveChangesChoice::cancel;
     std::optional<std::filesystem::path> fileToOpen;
     std::optional<std::filesystem::path> folderToSave;
+    std::optional<std::filesystem::path> fileToExport;
 
     // Recorded calls
     std::string windowTitle;
     std::vector<std::string> askedToSave;
     std::vector<std::filesystem::path> openStartFolders;
     std::vector<std::filesystem::path> suggestedFolders;
+    std::vector<std::filesystem::path> suggestedExports;
+    std::vector<std::string> exportPatterns;
     std::vector<Message> messages;
 };
 

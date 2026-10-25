@@ -37,7 +37,7 @@ VoiceEvents bass(const std::vector<rhythm::Fraction>& positions)
 TEST(ScoreTest, FNA02_WithoutNotesTheScoreIsOneEmptyBar)
 {
     EXPECT_EQ(buildScore({}, {.beatsPerBar = 3, .phase = 2}),
-              (Score{.beatsPerBar = 3, .pickupTicks = 0, .bars = 1, .voices = {}}));
+              (Score{.beatsPerBar = 3, .pickupTicks = 0, .bars = 1, .voices = {}, .originTick = 24}));
     const auto score = buildScore({bass({})}, {});
     EXPECT_EQ(score.bars, 1);
     ASSERT_EQ(score.voices.size(), 1U);
@@ -70,6 +70,7 @@ TEST(ScoreTest, FNA02_SilenceBeforeTheFirstNoteIsCutAndNotesBeforeTheFirstDownbe
 
     EXPECT_EQ(score.pickupTicks, 24);
     EXPECT_EQ(score.bars, 1);
+    EXPECT_EQ(score.originTick, 120);
     EXPECT_EQ(score.voices.front().events[0].startTick, 0);
     EXPECT_EQ(score.voices.front().events[1].startTick, 24);
 }
@@ -146,6 +147,12 @@ TEST(ScoreTest, FNA02_ScoresDifferInEveryPart)
     EXPECT_NE(score, other);
     other = score;
     other.voices.clear();
+    EXPECT_NE(score, other);
+    other = score;
+    other.originTick = 12;
+    EXPECT_NE(score, other);
+    other = score;
+    other.bpm = 90.0;
     EXPECT_NE(score, other);
 }
 

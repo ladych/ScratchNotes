@@ -19,6 +19,8 @@ struct FileActions
     std::function<void()> open;
     std::function<void()> save;
     std::function<void()> saveAs;
+    std::function<void()> exportMidi;
+    std::function<void()> exportMusicXml;
 };
 
 /// Actions of the menu "Bearbeiten".

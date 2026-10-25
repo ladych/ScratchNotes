@@ -1,5 +1,6 @@
 #include "notation/SvgForJuce.h"
 
+#include <array>
 #include <map>
 #include <memory>
 #include <tuple>
@@ -65,6 +66,30 @@ void colour(juce::XmlElement& element, const juce::String& ink)
         element.removeAttribute("font-size");
 }
 
+/// SMuFL metronome notes and the text characters that stand in for them.
+constexpr std::array<std::pair<juce::juce_wchar, juce::juce_wchar>, 2> kMetronomeNotes{
+    {{0xECA5, 0x2669}, {0xECA7, 0x266A}}};
+/// The note of the text font is smaller than that of the music font at the same size.
+constexpr double kNoteToTextSize = 0.8;
+
+/// Verovio writes the note of a tempo mark in its music font, which JUCE cannot find, so the mark showed only
+/// "= 92": a quarter or eighth note of the text font takes its place.
+void metronomeNote(juce::XmlElement& tspan)
+{
+    const auto text = tspan.getAllSubText();
+    for (const auto& [music, standIn] : kMetronomeNotes)
+    {
+        if (text != juce::String::charToString(music))
+            continue;
+        tspan.deleteAllChildElements();
+        tspan.addTextElement(juce::String::charToString(standIn));
+        tspan.removeAttribute("font-family");
+        tspan.setAttribute("font-size",
+                           juce::String{pixels(tspan.getStringAttribute("font-size")) * kNoteToTextSize} +
+                               "px");
+    }
+}
+
 void rewrite(juce::XmlElement& element,
              const juce::XmlElement& root,
              const Glyphs& glyphs,
@@ -74,6 +99,8 @@ void rewrite(juce::XmlElement& element,
         scaleViewBox(element, root);
     else if (element.hasTagName("use"))
         useGlyph(element, glyphs);
+    else if (element.hasTagName("tspan") && element.hasAttribute("font-family"))
+        metronomeNote(element);
     colour(element, ink);
 }
 

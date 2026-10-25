@@ -23,6 +23,7 @@
 #include "ui/LatencyCalibration.h"
 #include "ui/LatencyCompensation.h"
 #include "ui/RecordingController.h"
+#include "ui/ScoreExport.h"
 #include "ui/TakeAudioCache.h"
 #include "ui/ThemeSetting.h"
 #include "ui/TrackList.h"
@@ -102,6 +103,8 @@ private:
     // Note detection (AP4): one take after the other on its own thread.
     TranscriptionThread transcriptionThread_;
     ui::TranscriptionController transcription_;
+    // Export (AP8): the score files of the last note detection, copied where the user wants them.
+    ui::ScoreExport scoreExport_;
     // Recording (AP2): the audio thread fills the session's rings, the writer thread writes the files.
     engine::InputMeter inputMeter_;
     engine::Recorder recorder_;
