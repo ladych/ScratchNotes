@@ -118,6 +118,7 @@ VoiceRhythm voiceRhythm(const RhythmTrack& track, const BeatGrid& grid, const Rh
     VoiceRhythm rhythm{.style = guessStyle(track.notes), .quantization = {}};
     auto rules = rulesFor(rhythm.style.style);
     rules.dropGhostsUnderRinging = options.dropGhostsUnderRinging;
+    rules.dropOctaveGhosts = rules.dropOctaveGhosts && options.dropOctaveGhosts;
     rhythm.quantization = quantize(
         cleanUp(clusterOnsets(track.notes, rules.relativeAmplitude), track.onsets.detail, beats, rules),
         beats);

@@ -68,6 +68,8 @@ struct RhythmOptions
 {
     /// CleanUpRules::dropGhostsUnderRinging; off reproduces the PoC (E-12).
     bool dropGhostsUnderRinging = true;
+    /// CleanUpRules::dropOctaveGhosts for melody; off reproduces the PoC (E-12).
+    bool dropOctaveGhosts = true;
 };
 
 /// Cleans up the notes of a track with the rules of its style and quantizes them on the grid (F-TX-07,

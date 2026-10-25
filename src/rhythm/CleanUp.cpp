@@ -76,7 +76,7 @@ CleanUpRules rulesFor(Style style)
 {
     if (style == Style::riff)
         return {};
-    return {.mergeLateNotes = false, .graceBeats = 0.15, .graceWeightRatio = 0.5};
+    return {.mergeLateNotes = false, .graceBeats = 0.15, .graceWeightRatio = 0.5, .dropOctaveGhosts = true};
 }
 
 std::vector<std::size_t> pickPeaks(std::span<const float> envelope, const PeakPicking& settings)
@@ -120,6 +120,7 @@ constexpr double kReferencePercentile = 75.0;
 constexpr double kStrongAttack = 0.6;
 constexpr double kNoAttack = 0.15;
 constexpr double kStillRinging = 0.05;
+constexpr int kOctave = 12;
 constexpr double kLateNote = 0.2;
 constexpr int kLowResonance = 5;
 
@@ -202,6 +203,21 @@ bool underRinging(const Cluster& cluster, const std::vector<Cluster>& kept)
                                { return pitch < highest || classes.contains(pitch % 12); });
 }
 
+/// A single note with its octaves (one or two above) is that note; other chords stay as they are.
+std::vector<int> withoutOctaves(const std::vector<int>& pitches)
+{
+    const bool octavesOnly =
+        std::ranges::all_of(pitches,
+                            [&pitches](int pitch)
+                            {
+                                const int interval = pitch - pitches.front();
+                                return interval == 0 || interval == kOctave || interval == 2 * kOctave;
+                            });
+    if (pitches.size() > 1 && octavesOnly)
+        return {pitches.front()};
+    return pitches;
+}
+
 /// Light clusters shortly before a heavier one become its grace notes.
 std::vector<Cluster> withGraceNotes(std::vector<Cluster> kept, double beatSeconds, const CleanUpRules& rules)
 {
@@ -242,6 +258,8 @@ std::vector<Cluster> cleanUp(std::vector<Cluster> clusters,
             continue;
         if (rules.dropGhostsUnderRinging && cluster.flux < kNoAttack && underRinging(cluster, kept))
             continue;
+        if (rules.dropOctaveGhosts)
+            cluster.pitches = withoutOctaves(cluster.pitches);
         kept.push_back(std::move(cluster));
     }
     std::vector<double> intervals;
