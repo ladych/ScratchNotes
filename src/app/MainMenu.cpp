@@ -27,6 +27,7 @@ constexpr juce::CommandID recordToggle = 0x1201;
 constexpr juce::CommandID transportPlay = 0x1202;
 constexpr juce::CommandID transportStart = 0x1203;
 constexpr juce::CommandID transportClick = 0x1204;
+constexpr juce::CommandID transportCompare = 0x1205;
 constexpr juce::CommandID audioSettings = 0x2001;
 constexpr juce::CommandID audioTestTone = 0x2002;
 constexpr juce::CommandID audioLatency = 0x2003;
@@ -129,6 +130,12 @@ constexpr std::array kCommands{
                 i18n::marked("Transport"),
                 'k',
                 kCtrl},
+    CommandSpec{command::transportCompare,
+                i18n::marked("Play the notes"),
+                i18n::marked("Play the detected notes instead of the recording, to compare them"),
+                i18n::marked("Transport"),
+                'a',
+                0},
     CommandSpec{command::fileQuit,
                 i18n::marked("Quit"),
                 i18n::marked("Quit the program"),
@@ -208,8 +215,11 @@ std::vector<juce::CommandID> menuCommands(int menuIndex)
     case 1:
         return {command::editUndo, command::editRedo, command::editAddVoice};
     case 2:
-        return {
-            command::transportPlay, command::transportStart, command::recordToggle, command::transportClick};
+        return {command::transportPlay,
+                command::transportStart,
+                command::recordToggle,
+                command::transportClick,
+                command::transportCompare};
     case 3:
         return {command::audioSettings, command::audioLatency, command::audioTestTone};
     case 4:
@@ -334,6 +344,8 @@ void MainMenu::getCommandInfo(juce::CommandID commandID, juce::ApplicationComman
         result.setTicked(transport_.recording());
     if (commandID == command::transportClick)
         result.setTicked(transport_.clickOn());
+    if (commandID == command::transportCompare)
+        result.setTicked(transport_.playsTranscription());
     if (commandID == command::editUndo)
         result.setActive(edit_.canUndo());
     if (commandID == command::editRedo)
@@ -353,7 +365,7 @@ bool MainMenu::perform(const InvocationInfo& info)
 
 std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
 {
-    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 22> actions{{
+    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 23> actions{{
         {command::fileQuit, &quit_},
         {command::fileNew, &file_.newProject},
         {command::fileOpen, &file_.open},
@@ -368,6 +380,7 @@ std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
         {command::transportPlay, &transport_.togglePlay},
         {command::transportStart, &transport_.returnToStart},
         {command::transportClick, &transport_.toggleClick},
+        {command::transportCompare, &transport_.toggleTranscription},
         {command::audioLatency, &audio_.showLatency},
         {command::audioSettings, &audio_.showSettings},
         {command::audioTestTone, &audio_.toggleTestTone},

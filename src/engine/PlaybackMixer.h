@@ -17,7 +17,8 @@ public:
     static constexpr int kChunk = 512;
 
     /// Adds the takes from song position `position` on. A take recorded from song sample S with latency L
-    /// plays from S - L: what was played to the heard playback lands where it was heard (F-WI-05).
+    /// plays from S - L: what was played to the heard playback lands where it was heard (F-WI-05). While the
+    /// snapshot plays the transcription, the voices play their notes instead (F-NA-05).
     void renderTakes(const ProjectSnapshot& snapshot,
                      std::int64_t position,
                      float* const* outputs,

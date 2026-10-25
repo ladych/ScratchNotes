@@ -86,6 +86,12 @@ TEST(ScoreMidiTest, FEX01_BeatsBetweenAndAroundTheGrid)
     EXPECT_DOUBLE_EQ(secondsAt(kBeats, 5.5), 3.85);
 }
 
+TEST(ScoreMidiTest, FNA04_TheBeatAtATimeIsTheInverse)
+{
+    for (const double beat : {-1.0, 0.0, 0.25, 2.5, 4.0, 5.5})
+        EXPECT_NEAR(beatAt(kBeats, secondsAt(kBeats, beat)), beat, 1e-12);
+}
+
 TEST(ScoreMidiTest, FEX01_ATypeOneFileWithATempoTrackAndATrackPerVoice)
 {
     const auto file = read(scoreToMidi(twoFour(), kBeats));

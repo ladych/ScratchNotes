@@ -47,6 +47,10 @@ public:
     /// empty without a grid or without notes.
     [[nodiscard]] std::string scoreFile() const;
     void setScoreFile(const std::string& file);
+    /// The beat of the grid on which the score starts, counted from 0; the cursor in the score follows the
+    /// song from there (F-NA-04).
+    [[nodiscard]] int scoreOrigin() const;
+    void setScoreOrigin(int beat);
 
     /// Stores an analysis; the most likely meter becomes the chosen one.
     void setAnalysis(const std::vector<std::int64_t>& beats, const std::vector<MeterReading>& readings);

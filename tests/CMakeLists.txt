@@ -6,6 +6,7 @@ add_executable(snotes_tests
     engine/ClickTrackTest.cpp
     engine/InputMeterTest.cpp
     engine/LatencyProbeTest.cpp
+    engine/NoteSynthTest.cpp
     engine/PlaybackMixerTest.cpp
     engine/RecorderTest.cpp
     engine/SnapshotExchangeTest.cpp
@@ -64,6 +65,7 @@ add_executable(snotes_tests
     ui/RhythmUpdateTest.cpp
     ui/ScoreDisplayTest.cpp
     ui/ScoreExportTest.cpp
+    ui/ScoreSoundsTest.cpp
     ui/TakeAudioCacheTest.cpp
     ui/ThemeSettingTest.cpp
     ui/TrackListTest.cpp

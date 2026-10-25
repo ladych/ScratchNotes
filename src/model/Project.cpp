@@ -419,6 +419,17 @@ void Project::setView(View view)
     mutableTree().setProperty(ids::view, kNames.at(static_cast<std::size_t>(view)), nullptr);
 }
 
+Project::Playback Project::playback() const
+{
+    return getString(ids::playback) == "transcription" ? Playback::transcription : Playback::recording;
+}
+
+void Project::setPlayback(Playback playback)
+{
+    mutableTree().setProperty(
+        ids::playback, playback == Playback::transcription ? "transcription" : "recording", nullptr);
+}
+
 juce::ValueTree Project::child(const juce::Identifier& type) const
 {
     return tree().getChildWithName(type);

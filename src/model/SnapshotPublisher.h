@@ -18,7 +18,10 @@ using ProjectSnapshotExchange = engine::SnapshotExchange<engine::ProjectSnapshot
 class SnapshotPublisher
 {
 public:
-    SnapshotPublisher(juce::ValueTree project, ProjectSnapshotExchange& exchange, TakeAudioSource audio);
+    SnapshotPublisher(juce::ValueTree project,
+                      ProjectSnapshotExchange& exchange,
+                      TakeAudioSource audio,
+                      ScoreNotesSource notes);
 
     void publish();
 
@@ -26,6 +29,7 @@ private:
     juce::ValueTree project_;
     ProjectSnapshotExchange& exchange_;
     TakeAudioSource audio_;
+    ScoreNotesSource notes_;
     TreeChangeListener listener_;
 };
 

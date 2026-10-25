@@ -77,6 +77,9 @@ public:
     /// Click on or off and its tempo (F-WI-07).
     void setClickOn(bool on);
     void setClickBpm(double beatsPerMinute);
+    /// The transcription plays instead of the takes, to compare (F-NA-05); no undo step, like the view.
+    void setPlaysTranscription(bool on);
+    [[nodiscard]] bool playsTranscription() const;
 
 private:
     void edit(const std::string& voiceId, const std::function<void(model::Voice&)>& change);

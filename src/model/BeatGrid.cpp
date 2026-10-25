@@ -66,6 +66,16 @@ void BeatGrid::setScoreFile(const std::string& file)
     setString(ids::scoreFile, file);
 }
 
+int BeatGrid::scoreOrigin() const
+{
+    return getInt(ids::scoreOrigin, 0);
+}
+
+void BeatGrid::setScoreOrigin(int beat)
+{
+    set(ids::scoreOrigin, beat);
+}
+
 void BeatGrid::setAnalysis(const std::vector<std::int64_t>& beats, const std::vector<MeterReading>& readings)
 {
     clear();

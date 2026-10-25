@@ -31,6 +31,7 @@ constexpr int kTempoWidth = 110;
 constexpr int kViewButtonWidth = 64;
 constexpr int kViewGroup = 4711;
 constexpr int kMeterWidth = 110;
+constexpr int kCompareWidth = 130;
 
 } // namespace
 
@@ -41,7 +42,9 @@ MainComponent::MainComponent(juce::AudioDeviceManager& deviceManager,
     : deviceManager_(deviceManager), deviceSupervisor_(deviceSupervisor), recording_(tracks.recording),
       transcription_(tracks.transcription), transport_(tracks.transport), editor_(tracks.editor),
       grid_(tracks.grid), tapper_(tracks.tapper), project_(tracks.project), tracks_(std::move(tracks)),
-      score_(tracks_.context().project, tracks_.context().projectFolder)
+      score_(tracks_.context().project,
+             tracks_.context().projectFolder,
+             [this] { return transport_.positionSeconds(); })
 {
     addVoiceButton_.setButtonText("+");
     addVoiceButton_.setTooltip(i18n::trJuce("Add a voice on the next free input"));
@@ -56,6 +59,7 @@ MainComponent::MainComponent(juce::AudioDeviceManager& deviceManager,
                                                                    &recordButton_,
                                                                    &position_,
                                                                    &meter_,
+                                                                   &compareButton_,
                                                                    &tracksButton_,
                                                                    &notesButton_,
                                                                    &bothButton_,
@@ -108,6 +112,14 @@ void MainComponent::setUpClick()
     clickTempo_.setTextValueSuffix(" bpm");
     clickTempo_.setTooltip(i18n::trJuce("Tempo of the click in beats per minute"));
     clickTempo_.onValueChange = [this] { editor_.setClickBpm(clickTempo_.getValue()); };
+    compareButton_.setTooltip(
+        i18n::trJuce("Play the detected notes instead of the recording, to compare them (A)"));
+    compareButton_.setColour(juce::TextButton::buttonOnColourId, theme::colours().highlight);
+    compareButton_.onClick = [this]
+    {
+        editor_.setPlaysTranscription(!editor_.playsTranscription());
+        showClick();
+    };
 }
 
 void MainComponent::setUpMeter()
@@ -196,6 +208,7 @@ void MainComponent::layOutBar(juce::Rectangle<int> bar)
     place(recordButton_, kRecordButtonWidth);
     place(position_, kTimeWidth);
     place(meter_, kMeterWidth);
+    place(compareButton_, kCompareWidth);
     clickTempo_.setBounds(bar.removeFromRight(kTempoWidth).reduced(0, kPadding / 2));
     bar.removeFromRight(kPadding / 2);
     clickButton_.setBounds(bar.removeFromRight(kClickButtonWidth).reduced(0, kPadding / 2));
@@ -276,6 +289,9 @@ void MainComponent::showClick()
     clickButton_.setToggleState(mix.isClickOn(), juce::dontSendNotification);
     if (!clickTempo_.isMouseButtonDown())
         clickTempo_.setValue(mix.clickBpm(), juce::dontSendNotification);
+    const bool notes = editor_.playsTranscription();
+    compareButton_.setToggleState(notes, juce::dontSendNotification);
+    compareButton_.setButtonText(notes ? i18n::trJuce("Hear: notes") : i18n::trJuce("Hear: recording"));
 }
 
 } // namespace snotes::app

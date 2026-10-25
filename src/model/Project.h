@@ -152,6 +152,13 @@ public:
         both
     };
 
+    /// What the takes play (F-NA-05): the recording, or the transcribed notes as sound to compare.
+    enum class Playback : std::uint8_t
+    {
+        recording,
+        transcription
+    };
+
     Project(juce::ValueTree tree, juce::UndoManager* undoManager);
 
     [[nodiscard]] std::string name() const;
@@ -168,6 +175,9 @@ public:
     /// Saved with the project, but not undoable: it is no edit of the music. Both views by default.
     [[nodiscard]] View view() const;
     void setView(View view);
+    /// Not undoable either, like the view; the recording by default.
+    [[nodiscard]] Playback playback() const;
+    void setPlayback(Playback playback);
 
     /// The beat grid of all voices; changes to it are not undoable, like the notes.
     [[nodiscard]] BeatGrid beatGrid() const;

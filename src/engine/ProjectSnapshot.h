@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/MonitorSource.h"
+#include "engine/NoteSynth.h"
 #include "engine/TakeAudio.h"
 
 #include <cstdint>
@@ -26,6 +27,9 @@ struct VoiceSnapshot
     /// The channel of the active take that plays: processed if recorded, else DI (F-WI-02); null if the
     /// voice has no take or its file is missing. Freed with the snapshot on the GUI thread.
     std::shared_ptr<const TakeAudio> audio;
+    /// The voice's notes in the score as sound (F-NA-05), null if it has none; they play instead of the take
+    /// while the snapshot plays the transcription.
+    std::shared_ptr<const SynthNotes> notes;
 };
 
 /// Immutable state of the project for the audio thread (Pflichtenheft chapter 4), handed over through
@@ -36,6 +40,8 @@ struct ProjectSnapshot
     float masterGain = 1.0F;
     /// Click tempo in beats per minute, 0 while the click is off (F-WI-07).
     double clickBpm = 0.0;
+    /// The transcription plays instead of the takes, to compare (F-NA-05).
+    bool playsTranscription = false;
     std::vector<VoiceSnapshot> voices;
 };
 

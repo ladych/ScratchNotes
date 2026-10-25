@@ -1,5 +1,9 @@
 #include "model/SnapshotBuilder.h"
 
+#include <cstddef>
+#include <utility>
+#include <vector>
+
 namespace snotes::model
 {
 namespace
@@ -24,10 +28,25 @@ engine::VoiceSnapshot voiceSnapshot(const Voice& voice, bool anySolo, const Take
     return entry;
 }
 
+/// Gives every voice the first notes left with its name.
+void addNotes(engine::ProjectSnapshot& snapshot, const Project& project, std::vector<ScoreVoiceNotes> notes)
+{
+    for (int index = 0; index < project.numVoices(); ++index)
+    {
+        const auto name = project.voice(index).name();
+        for (auto& entry : notes)
+            if (entry.notes && entry.name == name)
+            {
+                snapshot.voices[static_cast<std::size_t>(index)].notes = std::move(entry.notes);
+                break;
+            }
+    }
+}
+
 } // namespace
 
-std::unique_ptr<const engine::ProjectSnapshot> SnapshotBuilder::build(const Project& project,
-                                                                      const TakeAudioSource& audio)
+std::unique_ptr<const engine::ProjectSnapshot>
+SnapshotBuilder::build(const Project& project, const TakeAudioSource& audio, const ScoreNotesSource& notes)
 {
     auto snapshot = std::make_unique<engine::ProjectSnapshot>();
     snapshot->sampleRate = project.sampleRate();
@@ -43,6 +62,11 @@ std::unique_ptr<const engine::ProjectSnapshot> SnapshotBuilder::build(const Proj
 
     for (int index = 0; index < project.numVoices(); ++index)
         snapshot->voices.push_back(voiceSnapshot(project.voice(index), anySolo, audio));
+    if (project.playback() == Project::Playback::transcription)
+    {
+        snapshot->playsTranscription = true;
+        addNotes(*snapshot, project, notes());
+    }
     return snapshot;
 }
 

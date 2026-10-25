@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
@@ -55,12 +56,13 @@ protected:
 
     [[nodiscard]] std::unique_ptr<const engine::ProjectSnapshot> build()
     {
-        return SnapshotBuilder::build(project, files.source());
+        return SnapshotBuilder::build(project, files.source(), [this] { return scoreNotes; });
     }
 
     juce::ValueTree tree = ProjectFactory::createDefault("Notizen");
     Project project{tree, nullptr};
     FakeTakeFiles files;
+    std::vector<ScoreVoiceNotes> scoreNotes;
 };
 
 TEST_F(SnapshotBuilderTest, FWI03_CopiesVoiceAndMixSettings)
@@ -164,13 +166,42 @@ TEST_F(SnapshotBuilderTest, FWI03_SoloSilencesTheOtherVoices)
     EXPECT_FALSE(snapshot->voices[2].audible);
 }
 
+TEST_F(SnapshotBuilderTest, FNA05_TheTranscriptionPlaysTheNotesOfTheVoiceWithTheSameName)
+{
+    addVoice("Bass", 0);
+    addVoice("Gitarre", 1);
+    addVoice("Gitarre", 2);
+    addVoice("Leer", 3);
+    const auto notes = [](std::int64_t start)
+    {
+        return std::make_shared<const engine::SynthNotes>(engine::SynthNotes{
+            .notes = {{.start = start, .end = start + 1, .frequency = 110.0}}, .longest = 1});
+    };
+    scoreNotes = {{.name = "Gitarre", .notes = notes(1)},
+                  {.name = "Bass", .notes = notes(2)},
+                  {.name = "Gitarre", .notes = notes(3)},
+                  {.name = "Leer", .notes = nullptr}};
+    EXPECT_FALSE(build()->playsTranscription);
+    EXPECT_EQ(build()->voices[0].notes, nullptr);
+
+    project.setPlayback(Project::Playback::transcription);
+    const auto snapshot = build();
+
+    EXPECT_TRUE(snapshot->playsTranscription);
+    EXPECT_EQ(snapshot->voices[0].notes->notes.front().start, 2);
+    EXPECT_EQ(snapshot->voices[1].notes->notes.front().start, 1);
+    EXPECT_EQ(snapshot->voices[2].notes->notes.front().start, 3);
+    EXPECT_EQ(snapshot->voices[3].notes, nullptr);
+}
+
 TEST(SnapshotPublisherTest, FPJ04_PublishesOnStartAndAfterEveryChange)
 {
     juce::UndoManager undoManager;
     auto tree = ProjectFactory::createDefault("Notizen");
     ProjectSnapshotExchange exchange;
     FakeTakeFiles files;
-    const SnapshotPublisher publisher{tree, exchange, files.source()};
+    const SnapshotPublisher publisher{
+        tree, exchange, files.source(), [] { return std::vector<ScoreVoiceNotes>{}; }};
 
     ASSERT_NE(exchange.acquire(), nullptr);
     EXPECT_TRUE(exchange.acquire()->voices.empty());

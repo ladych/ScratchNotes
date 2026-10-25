@@ -4,11 +4,14 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace snotes::notation
@@ -111,7 +114,10 @@ enum class Beam : std::uint8_t
 /// One written note value of a segment.
 struct Piece
 {
+    /// From the start of the bar.
     std::int64_t start = 0;
+    /// From the start of the score.
+    std::int64_t inScore = 0;
     NoteValue value;
     const ScoreEvent* event = nullptr;
     bool tieStop = false;
@@ -182,6 +188,7 @@ std::vector<Piece> piecesOf(const std::vector<Segment>& segments, const Measure&
         for (std::size_t index = 0; index < values.size(); ++index)
         {
             pieces.push_back({.start = start,
+                              .inScore = measure.start + start,
                               .value = values[index],
                               .event = segment.event,
                               .tieStop = index > 0 || segment.tiedFromBefore,
@@ -199,6 +206,8 @@ struct Staff
 {
     int number = 1;
     std::size_t strings = 0;
+    /// Index of the voice's part.
+    std::size_t part = 0;
 
     [[nodiscard]] bool tablature() const { return number == 2; }
     [[nodiscard]] const char* voice() const { return tablature() ? "5" : "1"; }
@@ -258,12 +267,24 @@ void addTie(juce::XmlElement& parent, const char* tag, const char* type)
     parent.createNewChildElement(tag)->setAttribute("type", type);
 }
 
-void addTupletBrackets(juce::XmlElement& notations, const Piece& piece)
+void addTuplet(juce::XmlElement& notations, const char* type, bool tablature)
+{
+    auto* tuplet = notations.createNewChildElement("tuplet");
+    tuplet->setAttribute("type", type);
+    if (tablature)
+    {
+        tuplet->setAttribute("bracket", "no");
+        tuplet->setAttribute("show-number", "none");
+    }
+}
+
+/// On the tablature the triplets have no bracket and no number.
+void addTupletBrackets(juce::XmlElement& notations, const Piece& piece, bool tablature = false)
 {
     if (piece.tupletStart)
-        notations.createNewChildElement("tuplet")->setAttribute("type", "start");
+        addTuplet(notations, "start", tablature);
     if (piece.tupletStop)
-        notations.createNewChildElement("tuplet")->setAttribute("type", "stop");
+        addTuplet(notations, "stop", tablature);
 }
 
 constexpr std::array<const char*, 4> kBeamNames{"", "begin", "continue", "end"};
@@ -295,21 +316,28 @@ void addNoteTail(
         addTie(*notations, "tied", "stop");
     if (piece.tieStart)
         addTie(*notations, "tied", "start");
-    if (leading && !staff.tablature())
-        addTupletBrackets(*notations, piece);
+    if (leading)
+        addTupletBrackets(*notations, piece, staff.tablature());
     if (chordNote.placement)
         addTechnical(*notations, *chordNote.placement, staff);
     if (notations->getNumChildElements() == 0)
         note.removeChildElement(notations, true);
 }
 
+/// index is the place of the note in its chord.
 void writeNote(juce::XmlElement& measure,
                const ChordNote& chordNote,
                const Piece& piece,
                const Staff& staff,
-               bool leading)
+               std::size_t index)
 {
+    const bool leading = index == 0;
     auto* note = measure.createNewChildElement("note");
+    note->setAttribute(
+        "id",
+        juce::String{noteId({.start = piece.inScore, .end = piece.inScore + piece.value.ticks})} + "_" +
+            juce::String{static_cast<int>(staff.part)} + "_" + juce::String{staff.number} + "_" +
+            juce::String{static_cast<int>(index)});
     if (!leading)
         note->createNewChildElement("chord");
     addPitch(*note, chordNote.pitch);
@@ -351,8 +379,8 @@ void writeRest(juce::XmlElement& measure, const Piece& piece, const Staff& staff
     if (!piece.wholeBar || staff.tablature())
         addValue(*note, piece.value);
     addText(*note, "staff", juce::String{staff.number});
-    if (!staff.tablature() && (piece.tupletStart || piece.tupletStop))
-        addTupletBrackets(*note->createNewChildElement("notations"), piece);
+    if (piece.tupletStart || piece.tupletStop)
+        addTupletBrackets(*note->createNewChildElement("notations"), piece, staff.tablature());
 }
 
 void writePiece(juce::XmlElement& measure, const Piece& piece, const Staff& staff)
@@ -373,7 +401,7 @@ void writePiece(juce::XmlElement& measure, const Piece& piece, const Staff& staf
     if (notes.empty())
         writeRest(measure, piece, staff);
     for (std::size_t index = 0; index < notes.size(); ++index)
-        writeNote(measure, notes[index], piece, staff, index == 0);
+        writeNote(measure, notes[index], piece, staff, index);
 }
 
 void addClefs(juce::XmlElement& attributes, model::Clef clef)
@@ -431,12 +459,14 @@ void addTempo(juce::XmlElement& measure, double bpm)
     direction->createNewChildElement("sound")->setAttribute("tempo", juce::String{bpm, 2});
 }
 
-/// bpm is the tempo to mark at the start, 0 for none.
+/// bpm is the tempo to mark at the start, 0 for none; index is the part's.
 void writeMeasure(
-    juce::XmlElement& part, const Score& score, const ScoreVoice& voice, const Measure& measure, double bpm)
+    juce::XmlElement& part, const Score& score, std::size_t index, const Measure& measure, double bpm)
 {
+    const auto& voice = score.voices[index];
     auto* element = part.createNewChildElement("measure");
     element->setAttribute("number", measure.number);
+    element->setAttribute("id", juce::String{kBarIdPrefix} + juce::String{measure.number});
     if (measure.number == 0)
         element->setAttribute("implicit", "yes");
     if (measure.start == 0)
@@ -445,13 +475,33 @@ void writeMeasure(
         addTempo(*element, bpm);
     const auto pieces = piecesOf(segmentsOf(voice.events, measure), measure);
     for (const auto& piece : pieces)
-        writePiece(*element, piece, {.number = 1, .strings = voice.fretboard.strings.size()});
+        writePiece(*element, piece, {.number = 1, .strings = voice.fretboard.strings.size(), .part = index});
     addText(*element->createNewChildElement("backup"), "duration", juce::String{measure.length});
     for (const auto& piece : pieces)
-        writePiece(*element, piece, {.number = 2, .strings = voice.fretboard.strings.size()});
+        writePiece(*element, piece, {.number = 2, .strings = voice.fretboard.strings.size(), .part = index});
 }
 
 } // namespace
+
+std::string noteId(const NoteSpan& span)
+{
+    return "n" + std::to_string(span.start) + "_" + std::to_string(span.end);
+}
+
+std::optional<NoteSpan> noteSpanOf(std::string_view id)
+{
+    NoteSpan span;
+    if (!id.starts_with('n'))
+        return std::nullopt;
+    const auto* const end = id.data() + id.size();
+    const auto start = std::from_chars(id.data() + 1, end, span.start);
+    if (start.ec != std::errc{} || start.ptr == end || *start.ptr != '_')
+        return std::nullopt;
+    const auto stop = std::from_chars(start.ptr + 1, end, span.end);
+    if (stop.ec != std::errc{})
+        return std::nullopt;
+    return span;
+}
 
 std::vector<NoteValue> noteValues(std::int64_t start, std::int64_t length)
 {
@@ -487,7 +537,7 @@ std::string toMusicXml(const Score& score)
         auto* part = root.createNewChildElement("part");
         part->setAttribute("id", id);
         for (const auto& measure : measures)
-            writeMeasure(*part, score, voice, measure, index == 0 ? score.bpm : 0.0);
+            writeMeasure(*part, score, index, measure, index == 0 ? score.bpm : 0.0);
     }
     juce::XmlElement::TextFormat format;
     format.dtd = "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 4.0 Partwise//EN\" "

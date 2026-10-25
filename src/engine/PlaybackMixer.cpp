@@ -13,10 +13,19 @@ void PlaybackMixer::renderTakes(const ProjectSnapshot& snapshot,
 {
     for (const auto& voice : snapshot.voices)
     {
-        if (!voice.audible || !voice.audio)
+        if (!voice.audible)
+            continue;
+        const float gain = voice.gain * snapshot.masterGain;
+        if (snapshot.playsTranscription)
+        {
+            if (voice.notes)
+                NoteSynth::render(
+                    *voice.notes, snapshot.sampleRate, position, gain, outputs, numOutputs, numSamples);
+            continue;
+        }
+        if (!voice.audio)
             continue;
         const std::int64_t start = voice.takeStartSample - voice.takeLatencyOffsetSamples;
-        const float gain = voice.gain * snapshot.masterGain;
         for (int offset = 0; offset < numSamples; offset += kChunk)
         {
             const int count = std::min(kChunk, numSamples - offset);
