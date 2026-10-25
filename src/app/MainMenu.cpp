@@ -33,6 +33,7 @@ constexpr juce::CommandID audioLatency = 0x2003;
 constexpr juce::CommandID notesTranscribe = 0x3001;
 constexpr juce::CommandID notesCancel = 0x3002;
 constexpr juce::CommandID notesDetectGrid = 0x3003;
+constexpr juce::CommandID notesTapBeat = 0x3004;
 constexpr juce::CommandID helpAbout = 0x9001;
 } // namespace command
 
@@ -171,6 +172,13 @@ constexpr std::array kCommands{
                 i18n::marked("Notes"),
                 0,
                 0},
+    CommandSpec{
+        command::notesTapBeat,
+        i18n::marked("Tap the beat"),
+        i18n::marked("Tap every beat along during playback; the taps replace the beat grid when it stops"),
+        i18n::marked("Notes"),
+        'b',
+        0},
     CommandSpec{command::helpAbout,
                 i18n::marked("About and licenses..."),
                 i18n::marked("Version, license and the components of other authors"),
@@ -205,7 +213,8 @@ std::vector<juce::CommandID> menuCommands(int menuIndex)
     case 3:
         return {command::audioSettings, command::audioLatency, command::audioTestTone};
     case 4:
-        return {command::notesTranscribe, command::notesCancel, command::notesDetectGrid};
+        return {
+            command::notesTranscribe, command::notesCancel, command::notesTapBeat, command::notesDetectGrid};
     default:
         return {command::helpAbout};
     }
@@ -260,7 +269,7 @@ juce::PopupMenu MainMenu::getMenuForIndex(int menuIndex, const juce::String& /*m
     juce::PopupMenu menu;
     for (const auto id : menuCommands(menuIndex))
     {
-        if (id == command::fileQuit || id == command::fileExportMidi || id == command::notesDetectGrid ||
+        if (id == command::fileQuit || id == command::fileExportMidi || id == command::notesTapBeat ||
             id == command::editAddVoice || id == command::transportClick)
             menu.addSeparator();
         menu.addCommandItem(&commands_, id);
@@ -344,7 +353,7 @@ bool MainMenu::perform(const InvocationInfo& info)
 
 std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
 {
-    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 21> actions{{
+    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 22> actions{{
         {command::fileQuit, &quit_},
         {command::fileNew, &file_.newProject},
         {command::fileOpen, &file_.open},
@@ -365,6 +374,7 @@ std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
         {command::notesTranscribe, &notes_.transcribe},
         {command::notesCancel, &notes_.cancel},
         {command::notesDetectGrid, &notes_.detectGridAgain},
+        {command::notesTapBeat, &notes_.tapBeat},
         {command::helpAbout, &help_.showAbout},
     }};
     for (const auto& [id, action] : actions)

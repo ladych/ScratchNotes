@@ -2,6 +2,7 @@
 
 #include "engine/InputMeter.h"
 #include "model/TreeChangeListener.h"
+#include "ui/BeatTapper.h"
 #include "ui/GridCorrection.h"
 #include "ui/LevelMeter.h"
 #include "ui/RecordingController.h"
@@ -33,6 +34,7 @@ struct TrackViewContext
     ui::RecordingController& recording;
     ui::TranscriptionController& transcription;
     ui::GridCorrection& grid;
+    ui::BeatTapper& tapper;
     ui::TransportControl& transport;
     engine::InputMeter& meter;
     /// Names of the inputs of the open device.

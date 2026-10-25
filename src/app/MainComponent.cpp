@@ -40,7 +40,7 @@ MainComponent::MainComponent(juce::AudioDeviceManager& deviceManager,
                              std::function<void()> addVoice)
     : deviceManager_(deviceManager), deviceSupervisor_(deviceSupervisor), recording_(tracks.recording),
       transcription_(tracks.transcription), transport_(tracks.transport), editor_(tracks.editor),
-      grid_(tracks.grid), project_(tracks.project), tracks_(std::move(tracks)),
+      grid_(tracks.grid), tapper_(tracks.tapper), project_(tracks.project), tracks_(std::move(tracks)),
       score_(tracks_.context().project, tracks_.context().projectFolder)
 {
     addVoiceButton_.setButtonText("+");
@@ -220,6 +220,7 @@ void MainComponent::timerCallback()
 {
     recording_.poll();
     transcription_.poll();
+    tapper_.poll();
     showTransportState();
     showClick();
     showMeters();
@@ -230,7 +231,9 @@ void MainComponent::timerCallback()
         repaint();
     }
     // The note detection comes first, so it is seen next to a long audio status.
-    auto status = transcription_.statusText();
+    auto status = tapper_.statusText();
+    if (status.empty())
+        status = transcription_.statusText();
     if (status.empty())
         status = ui::beatGridSummary(project_);
     if (!status.empty())

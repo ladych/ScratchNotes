@@ -142,11 +142,31 @@ TEST_F(GridCorrectionTest, FKO02_TheDownbeatIsSetOnABeat)
     EXPECT_EQ(project.beatGrid().downbeatPhase(), 0);
 }
 
+TEST_F(GridCorrectionTest, FKO03_TappedBeatsReplaceTheBeatsOfTheirStretch)
+{
+    // The last tap comes too soon after the one before; the taps come in any order.
+    correction.replaceBeats({0.6, 1.25, 0.9, 1.27});
+
+    EXPECT_THAT(beats(), ElementsAre(0, 28800, 43200, 60000, 72000, 96000));
+    EXPECT_TRUE(project.beatGrid().isEdited());
+    EXPECT_EQ(project.beatGrid().downbeatPhase(), 1);
+}
+
+TEST_F(GridCorrectionTest, FKO03_OneTapIsNoBeat)
+{
+    correction.replaceBeats({1.0});
+    correction.replaceBeats({1.0, 1.01});
+
+    EXPECT_FALSE(project.beatGrid().isEdited());
+    EXPECT_EQ(beats().size(), 5U);
+}
+
 TEST_F(GridCorrectionTest, FKO02_WithoutAGridNothingCanBeCorrected)
 {
     project.beatGrid().clear();
 
     correction.insertBeat(1.0);
+    correction.replaceBeats({1.0, 1.5});
     correction.setDownbeat(0);
     correction.chooseMeter(0);
 

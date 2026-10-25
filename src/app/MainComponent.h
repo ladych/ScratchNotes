@@ -70,6 +70,7 @@ private:
     ui::TransportControl& transport_;
     ui::TrackEditor& editor_;
     ui::GridCorrection& grid_;
+    ui::BeatTapper& tapper_;
     juce::ValueTree project_;
     TrackView tracks_;
     ScoreView score_;
