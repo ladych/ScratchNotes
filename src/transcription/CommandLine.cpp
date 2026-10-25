@@ -24,7 +24,7 @@ std::string commandLineUsage()
         "tablature of each voice to <name>.events.csv and <name>.tab.txt and the beat grid and meter of all\n"
         "of them, as voices of one piece, to <first name>.beats.csv and <first name>.meter.csv, and their "
         "score\n"
-        "with notes and tablature to <first name>.musicxml.\n"
+        "with notes and tablature to <first name>.musicxml and as MIDI to <first name>.score.mid.\n"
         "--separate gives each recording its own grid. The profile sets the strings of the tablature.\n"
         "Profiles:\n";
     for (const auto& profile : model::instrumentProfiles())

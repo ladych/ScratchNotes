@@ -7,9 +7,11 @@
 #include "model/InstrumentProfile.h"
 #include "notation/MusicXml.h"
 #include "notation/Score.h"
+#include "notation/ScoreMidi.h"
 #include "rhythm/OnsetStrength.h"
 #include "rhythm/RhythmAnalysis.h"
 #include "rhythm/RhythmCsv.h"
+#include "rhythm/Statistics.h"
 #include "tab/TabText.h"
 #include "tab/Tablature.h"
 #include "transcription/CommandLine.h"
@@ -169,7 +171,8 @@ writeVoice(const Transcribed& voice, const rhythm::BeatGrid& grid, const std::st
             .tabs = tabs};
 }
 
-/// Each voice, then the score of all of them in the most likely meter to <stem>.musicxml.
+/// Each voice, then the score of all of them in the most likely meter to <stem>.musicxml and
+/// <stem>.score.mid.
 void writeVoices(const std::vector<Transcribed>& voices,
                  const rhythm::BeatGrid& grid,
                  const std::filesystem::path& stem,
@@ -180,12 +183,15 @@ void writeVoices(const std::vector<Transcribed>& voices,
     for (const auto& voice : voices)
         scored.push_back(writeVoice(voice, grid, outputFolder));
     const auto& meter = grid.meter.ranking.front();
-    const auto score = notation::buildScore(scored, {.beatsPerBar = meter.beatsPerBar, .phase = meter.phase});
+    auto score = notation::buildScore(scored, {.beatsPerBar = meter.beatsPerBar, .phase = meter.phase});
+    score.bpm = rhythm::median(rhythm::tempoCurve(grid.beats));
     writeText(stem, ".musicxml", notation::toMusicXml(score));
+    const auto midi = notation::scoreToMidi(score, grid.beats);
+    writeFile(std::filesystem::path{stem} += ".score.mid", midi.data(), midi.size());
 }
 
 /// The grid of the voices to <first name>.beats.csv and .meter.csv, then each voice, then the score of all
-/// of them to <first name>.musicxml.
+/// of them to <first name>.musicxml and .score.mid.
 void writeRhythm(const std::vector<Transcribed>& voices, const std::string& outputFolder)
 {
     const auto started = std::chrono::steady_clock::now();

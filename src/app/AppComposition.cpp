@@ -116,6 +116,7 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
           fileSystem_,
           transcriptionThread_,
           {.projectFolder = [this] { return document_.currentFolder(); }, .showMessage = showWarning}),
+      scoreExport_(project_, fileSystem_, documentView_, [this] { return document_.currentFolder(); }),
       latencySettings_(fileSystem_, settingsFile("latency-offset.txt")), latency_(latencySettings_),
       trackEditor_(model::Project{project_, &undoManager_}),
       recording_(
@@ -153,7 +154,9 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
           {.newProject = [this] { document_.newProject(); },
            .open = [this] { document_.open(); },
            .save = [this] { document_.save(); },
-           .saveAs = [this] { document_.saveAs(); }},
+           .saveAs = [this] { document_.saveAs(); },
+           .exportMidi = [this] { scoreExport_.exportAs(ui::ExportFormat::midi); },
+           .exportMusicXml = [this] { scoreExport_.exportAs(ui::ExportFormat::musicXml); }},
           {.undo = [this] { document_.undo(); },
            .redo = [this] { document_.redo(); },
            .canUndo = [this] { return document_.canUndo(); },

@@ -10,6 +10,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 #include <cmath>
 #include <filesystem>
@@ -167,6 +168,38 @@ TEST_F(RhythmUpdateTest, FNA02_WritesTheScoreOfAllVoicesInTheChosenMeter)
     EXPECT_NE(score.find("<staff-lines>5</staff-lines>"), std::string::npos);
     // Only voices with an analysed take are in the score.
     EXPECT_EQ(score.find("Gitarre"), std::string::npos);
+}
+
+TEST_F(RhythmUpdateTest, FEX01_WritesTheScoreAsMidiInSyncWithTheGridAndWithItsTempo)
+{
+    ASSERT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+
+    const auto& midi = files.at(folder / "score.mid");
+    juce::MemoryInputStream stream{midi.data(), midi.size(), false};
+    juce::MidiFile file;
+    ASSERT_TRUE(file.readFrom(stream));
+    file.convertTimestampTicksToSeconds();
+    ASSERT_EQ(file.getNumTracks(), 2);
+    // The first note of the bass sounds after the take's start at 1 s, within the first beats of the grid.
+    const auto& bass = *file.getTrack(1);
+    int first = 0;
+    while (!bass.getEventPointer(first)->message.isNoteOn())
+        ++first;
+    const auto played = bass.getEventPointer(first)->message.getTimeStamp();
+    const auto beats = project.beatGrid().beats();
+    ASSERT_GT(beats.size(), 4U);
+    EXPECT_GT(played, 1.0);
+    EXPECT_LT(played, static_cast<double>(beats[4]) / project.sampleRate());
+    EXPECT_NE(files.at(folder / "score.musicxml").find("<per-minute>"), std::string::npos);
+}
+
+TEST_F(RhythmUpdateTest, FEX01_ReportsAMidiFileThatCannotBeWritten)
+{
+    EXPECT_CALL(fileSystem, writeText(_, _)).WillRepeatedly(Return(true));
+    EXPECT_CALL(fileSystem, writeText(folder / "score.mid", _)).WillOnce(Return(false));
+
+    EXPECT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::writeFailed);
+    EXPECT_EQ(project.beatGrid().scoreFile(), "");
 }
 
 TEST_F(RhythmUpdateTest, FNA02_ReportsAScoreThatCannotBeWritten)

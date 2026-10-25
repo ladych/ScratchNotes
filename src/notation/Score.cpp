@@ -75,6 +75,7 @@ Score buildScore(const std::vector<VoiceEvents>& voices, const Meter& meter)
     const auto downbeat = meter.phase * kTicksPerBeat;
     const auto barStart = downbeat + floorDivide(first - downbeat, bar) * bar;
     const auto origin = floorDivide(first, kTicksPerBeat) * kTicksPerBeat;
+    score.originTick = origin;
     if (origin != barStart)
         score.pickupTicks = barStart + bar - origin;
     std::int64_t end = 0;

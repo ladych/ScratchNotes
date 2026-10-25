@@ -69,6 +69,7 @@ void JuceDocumentView::chooseProjectFile(const std::filesystem::path& startFolde
 {
     launchChooser(i18n::trJuce("Open project"),
                   toJuceFile(startFolder),
+                  kProjectFilePattern,
                   juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
                   std::move(onChosen));
 }
@@ -79,8 +80,21 @@ void JuceDocumentView::chooseProjectFolder(const std::filesystem::path& suggeste
     // The user types the name of the new folder; it is created when the project is saved.
     launchChooser(i18n::trJuce("Save project in a new folder"),
                   toJuceFile(suggestedFolder),
+                  kProjectFilePattern,
                   juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles |
                       juce::FileBrowserComponent::canSelectDirectories,
+                  std::move(onChosen));
+}
+
+void JuceDocumentView::chooseExportFile(const std::filesystem::path& suggestedFile,
+                                        const std::string& pattern,
+                                        ui::PathChosenCallback onChosen)
+{
+    launchChooser(i18n::trJuce("Export score"),
+                  toJuceFile(suggestedFile),
+                  fromUtf8(pattern),
+                  juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles |
+                      juce::FileBrowserComponent::warnAboutOverwriting,
                   std::move(onChosen));
 }
 
@@ -93,11 +107,12 @@ void JuceDocumentView::showMessage(const std::string& title, const std::string& 
 
 void JuceDocumentView::launchChooser(const juce::String& title,
                                      const juce::File& start,
+                                     const juce::String& pattern,
                                      int flags,
                                      ui::PathChosenCallback onChosen)
 {
     // The chooser must outlive the asynchronous dialog, so it is kept until the next one.
-    chooser_ = std::make_unique<juce::FileChooser>(title, start, kProjectFilePattern);
+    chooser_ = std::make_unique<juce::FileChooser>(title, start, pattern);
     chooser_->launchAsync(flags,
                           [onChosen = std::move(onChosen)](const juce::FileChooser& chooser)
                           {

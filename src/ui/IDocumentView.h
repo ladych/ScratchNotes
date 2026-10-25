@@ -34,6 +34,11 @@ public:
     /// the user cancels.
     virtual void chooseProjectFolder(const std::filesystem::path& suggestedFolder,
                                      PathChosenCallback onChosen) = 0;
+    /// Asks for the file to export to, suggesting `suggestedFile`; pattern filters the files shown, e.g.
+    /// "*.mid". Reports std::nullopt if the user cancels.
+    virtual void chooseExportFile(const std::filesystem::path& suggestedFile,
+                                  const std::string& pattern,
+                                  PathChosenCallback onChosen) = 0;
     virtual void showMessage(const std::string& title, const std::string& message) = 0;
 
 protected:

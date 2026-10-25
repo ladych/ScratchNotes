@@ -18,6 +18,8 @@ constexpr juce::CommandID fileNew = 0x1002;
 constexpr juce::CommandID fileOpen = 0x1003;
 constexpr juce::CommandID fileSave = 0x1004;
 constexpr juce::CommandID fileSaveAs = 0x1005;
+constexpr juce::CommandID fileExportMidi = 0x1006;
+constexpr juce::CommandID fileExportMusicXml = 0x1007;
 constexpr juce::CommandID editUndo = 0x1101;
 constexpr juce::CommandID editRedo = 0x1102;
 constexpr juce::CommandID editAddVoice = 0x1103;
@@ -71,6 +73,18 @@ constexpr std::array kCommands{
                 i18n::marked("File"),
                 's',
                 kCtrlShift},
+    CommandSpec{command::fileExportMidi,
+                i18n::marked("Export as MIDI..."),
+                i18n::marked("Save the score as MIDI file in sync with the recording"),
+                i18n::marked("File"),
+                0,
+                0},
+    CommandSpec{command::fileExportMusicXml,
+                i18n::marked("Export as MusicXML..."),
+                i18n::marked("Save the score with tablature and tempo as MusicXML file"),
+                i18n::marked("File"),
+                0,
+                0},
     CommandSpec{command::editUndo,
                 i18n::marked("Undo"),
                 i18n::marked("Undo the last change"),
@@ -169,8 +183,13 @@ std::vector<juce::CommandID> menuCommands(int menuIndex)
     switch (menuIndex)
     {
     case 0:
-        return {
-            command::fileNew, command::fileOpen, command::fileSave, command::fileSaveAs, command::fileQuit};
+        return {command::fileNew,
+                command::fileOpen,
+                command::fileSave,
+                command::fileSaveAs,
+                command::fileExportMidi,
+                command::fileExportMusicXml,
+                command::fileQuit};
     case 1:
         return {command::editUndo, command::editRedo, command::editAddVoice};
     case 2:
@@ -234,7 +253,8 @@ juce::PopupMenu MainMenu::getMenuForIndex(int menuIndex, const juce::String& /*m
     juce::PopupMenu menu;
     for (const auto id : menuCommands(menuIndex))
     {
-        if (id == command::fileQuit || id == command::editAddVoice || id == command::transportClick)
+        if (id == command::fileQuit || id == command::fileExportMidi || id == command::editAddVoice ||
+            id == command::transportClick)
             menu.addSeparator();
         menu.addCommandItem(&commands_, id);
     }
@@ -317,12 +337,14 @@ bool MainMenu::perform(const InvocationInfo& info)
 
 std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
 {
-    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 18> actions{{
+    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 20> actions{{
         {command::fileQuit, &quit_},
         {command::fileNew, &file_.newProject},
         {command::fileOpen, &file_.open},
         {command::fileSave, &file_.save},
         {command::fileSaveAs, &file_.saveAs},
+        {command::fileExportMidi, &file_.exportMidi},
+        {command::fileExportMusicXml, &file_.exportMusicXml},
         {command::editUndo, &edit_.undo},
         {command::editRedo, &edit_.redo},
         {command::editAddVoice, &edit_.addVoice},

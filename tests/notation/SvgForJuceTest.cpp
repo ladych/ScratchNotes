@@ -126,6 +126,39 @@ TEST(SvgForJuceTest, FNA01_TextMovesOutOfTheGroupsWithItsPositionAndSizeTransfor
     EXPECT_FALSE(other->hasAttribute("font-size"));
 }
 
+/// A tempo mark as Verovio writes it: the note in its music font, quarter or eighth, then the text.
+std::string tempoMark(const char* note)
+{
+    return std::string{R"svg(<svg width="100px" height="100px"><text x="1" y="2" font-size="0px">)svg"} +
+           R"svg(<tspan class="text"><tspan font-family="Leipzig" font-size="720px">)svg" + note +
+           R"svg(</tspan></tspan><tspan font-size="405px"> = 92</tspan></text></svg>)svg";
+}
+
+/// The first tspan of the tempo mark, which holds the note.
+juce::String noteOf(const juce::XmlElement& svg, const char* attribute = nullptr)
+{
+    const auto* note = svg.getChildByName("text")->getChildByName("tspan")->getChildByName("tspan");
+    return attribute == nullptr ? note->getAllSubText() : note->getStringAttribute(attribute);
+}
+
+TEST(SvgForJuceTest, FEX02_TheNoteOfATempoMarkComesFromTheTextFont)
+{
+    const auto quarter = svgForJuce(tempoMark("&#xECA5;"), "#112233");
+    ASSERT_NE(quarter, nullptr);
+    EXPECT_EQ(noteOf(*quarter), juce::String::charToString(0x2669));
+    EXPECT_EQ(noteOf(*quarter, "font-family"), "");
+    EXPECT_EQ(noteOf(*quarter, "font-size"), "576px");
+
+    const auto eighth = svgForJuce(tempoMark("&#xECA7;"), "#112233");
+    ASSERT_NE(eighth, nullptr);
+    EXPECT_EQ(noteOf(*eighth), juce::String::charToString(0x266A));
+
+    // Other music symbols keep their font.
+    const auto other = svgForJuce(tempoMark("&#xE0A4;"), "#112233");
+    ASSERT_NE(other, nullptr);
+    EXPECT_EQ(noteOf(*other, "font-family"), "Leipzig");
+}
+
 /// Elements of the tree that JUCE cannot draw.
 int undrawable(const juce::XmlElement& svg)
 {

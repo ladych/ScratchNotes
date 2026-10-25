@@ -6,6 +6,7 @@
 #include "model/Project.h"
 #include "notation/MusicXml.h"
 #include "notation/Score.h"
+#include "notation/ScoreMidi.h"
 #include "rhythm/RhythmAnalysis.h"
 #include "rhythm/RhythmCsv.h"
 #include "rhythm/Statistics.h"
@@ -125,15 +126,22 @@ std::optional<notation::VoiceEvents> writeEvents(Analysed& analysed,
     return voice;
 }
 
-/// The score of all voices in the chosen meter to kScoreFile; false if it cannot be written.
+/// The score of all voices in the chosen meter to kScoreFile and kMidiFile; false if one cannot be written.
+/// beats are the times of the grid in seconds.
 bool writeScore(const std::vector<notation::VoiceEvents>& voices,
                 model::BeatGrid grid,
+                const std::vector<double>& beats,
                 io::IFileSystem& fileSystem,
                 const std::filesystem::path& folder)
 {
-    const auto score = notation::buildScore(
+    auto score = notation::buildScore(
         voices, {.beatsPerBar = std::max(1, grid.chosenMeter()), .phase = grid.downbeatPhase()});
+    score.bpm = rhythm::median(rhythm::tempoCurve(beats));
+    const auto midi = notation::scoreToMidi(score, beats);
+    const std::string midiBytes{midi.begin(), midi.end()};
     if (!fileSystem.writeText(folder / kScoreFile, notation::toMusicXml(score)))
+        return false;
+    if (!fileSystem.writeText(folder / kMidiFile, midiBytes))
         return false;
     grid.setScoreFile(kScoreFile);
     return true;
@@ -174,8 +182,9 @@ updateRhythm(juce::ValueTree project, io::IFileSystem& fileSystem, const std::fi
             return RhythmUpdate::writeFailed;
         voices.push_back(std::move(*voice));
     }
-    return writeScore(voices, model.beatGrid(), fileSystem, folder) ? RhythmUpdate::updated
-                                                                    : RhythmUpdate::writeFailed;
+    return writeScore(voices, model.beatGrid(), analysis.beats, fileSystem, folder)
+               ? RhythmUpdate::updated
+               : RhythmUpdate::writeFailed;
 }
 
 std::string beatGridSummary(const juce::ValueTree& project)
