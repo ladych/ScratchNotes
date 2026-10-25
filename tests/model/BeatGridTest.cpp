@@ -82,6 +82,25 @@ TEST_F(BeatGridTest, FNA02_KeepsTheScoreUntilTheGridIsCleared)
     EXPECT_EQ(grid.scoreFile(), "");
 }
 
+TEST_F(BeatGridTest, FKO02_ACorrectionKeepsTheReadingsAndTheScore)
+{
+    auto grid = project.beatGrid();
+    grid.setAnalysis({1, 2}, {{.numerator = 3, .confidence = 1.0, .phase = 1}});
+    grid.setScoreFile("score.musicxml");
+    EXPECT_FALSE(grid.isEdited());
+
+    grid.setEdited({1, 5, 9}, 4, 2);
+
+    EXPECT_TRUE(grid.isEdited());
+    EXPECT_EQ(grid.source(), "edited");
+    EXPECT_THAT(grid.beats(), ElementsAre(1, 5, 9));
+    EXPECT_EQ(grid.chosenMeter(), 4);
+    EXPECT_EQ(grid.downbeatPhase(), 2);
+    EXPECT_EQ(grid.meterReadings().size(), 1U);
+    EXPECT_EQ(grid.scoreFile(), "score.musicxml");
+    EXPECT_FALSE(undoManager.canUndo());
+}
+
 TEST_F(BeatGridTest, FTX06_ReadingsDifferInEveryField)
 {
     const MeterReading reading{.numerator = 4, .confidence = 0.5, .phase = 1};

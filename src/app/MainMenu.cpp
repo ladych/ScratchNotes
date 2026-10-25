@@ -32,6 +32,7 @@ constexpr juce::CommandID audioTestTone = 0x2002;
 constexpr juce::CommandID audioLatency = 0x2003;
 constexpr juce::CommandID notesTranscribe = 0x3001;
 constexpr juce::CommandID notesCancel = 0x3002;
+constexpr juce::CommandID notesDetectGrid = 0x3003;
 constexpr juce::CommandID helpAbout = 0x9001;
 } // namespace command
 
@@ -164,6 +165,12 @@ constexpr std::array kCommands{
                 i18n::marked("Notes"),
                 0,
                 0},
+    CommandSpec{command::notesDetectGrid,
+                i18n::marked("Detect beat grid again"),
+                i18n::marked("Forget the corrections of meter and beats and detect them again"),
+                i18n::marked("Notes"),
+                0,
+                0},
     CommandSpec{command::helpAbout,
                 i18n::marked("About and licenses..."),
                 i18n::marked("Version, license and the components of other authors"),
@@ -198,7 +205,7 @@ std::vector<juce::CommandID> menuCommands(int menuIndex)
     case 3:
         return {command::audioSettings, command::audioLatency, command::audioTestTone};
     case 4:
-        return {command::notesTranscribe, command::notesCancel};
+        return {command::notesTranscribe, command::notesCancel, command::notesDetectGrid};
     default:
         return {command::helpAbout};
     }
@@ -253,8 +260,8 @@ juce::PopupMenu MainMenu::getMenuForIndex(int menuIndex, const juce::String& /*m
     juce::PopupMenu menu;
     for (const auto id : menuCommands(menuIndex))
     {
-        if (id == command::fileQuit || id == command::fileExportMidi || id == command::editAddVoice ||
-            id == command::transportClick)
+        if (id == command::fileQuit || id == command::fileExportMidi || id == command::notesDetectGrid ||
+            id == command::editAddVoice || id == command::transportClick)
             menu.addSeparator();
         menu.addCommandItem(&commands_, id);
     }
@@ -337,7 +344,7 @@ bool MainMenu::perform(const InvocationInfo& info)
 
 std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
 {
-    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 20> actions{{
+    const std::array<std::pair<juce::CommandID, const std::function<void()>*>, 21> actions{{
         {command::fileQuit, &quit_},
         {command::fileNew, &file_.newProject},
         {command::fileOpen, &file_.open},
@@ -357,6 +364,7 @@ std::function<void()> MainMenu::actionFor(juce::CommandID commandID) const
         {command::audioTestTone, &audio_.toggleTestTone},
         {command::notesTranscribe, &notes_.transcribe},
         {command::notesCancel, &notes_.cancel},
+        {command::notesDetectGrid, &notes_.detectGridAgain},
         {command::helpAbout, &help_.showAbout},
     }};
     for (const auto& [id, action] : actions)

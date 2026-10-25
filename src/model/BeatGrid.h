@@ -30,9 +30,14 @@ class BeatGrid : public TreeNode
 public:
     explicit BeatGrid(juce::ValueTree tree);
 
+    static constexpr const char* kAnalysed = "auto";
+    /// The user chose the meter or moved, inserted or deleted beats (F-KO-01, F-KO-02).
+    static constexpr const char* kEdited = "edited";
+
     [[nodiscard]] std::vector<std::int64_t> beats() const;
-    /// "auto" after the analysis; "edited" is for the correction (F-KO-02).
+    /// kAnalysed after the analysis, kEdited after a correction; empty without a grid.
     [[nodiscard]] std::string source() const;
+    [[nodiscard]] bool isEdited() const { return source() == kEdited; }
     [[nodiscard]] std::vector<MeterReading> meterReadings() const;
     /// Beats per bar of the chosen meter, 0 without a grid.
     [[nodiscard]] int chosenMeter() const;
@@ -45,6 +50,9 @@ public:
 
     /// Stores an analysis; the most likely meter becomes the chosen one.
     void setAnalysis(const std::vector<std::int64_t>& beats, const std::vector<MeterReading>& readings);
+    /// A correction: the beats, the meter and the first downbeat become the user's, the readings of the
+    /// analysis and the score stay.
+    void setEdited(const std::vector<std::int64_t>& beats, int meter, int phase);
     /// Also forgets the score.
     void clear();
 };

@@ -59,6 +59,7 @@ struct NotesActions
 {
     std::function<void()> transcribe;
     std::function<void()> cancel;
+    std::function<void()> detectGridAgain;
     std::function<bool()> running;
 };
 

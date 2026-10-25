@@ -116,6 +116,10 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
           fileSystem_,
           transcriptionThread_,
           {.projectFolder = [this] { return document_.currentFolder(); }, .showMessage = showWarning}),
+      gridCorrection_(
+          project_,
+          fileSystem_,
+          {.projectFolder = [this] { return document_.currentFolder(); }, .showMessage = showWarning}),
       scoreExport_(project_, fileSystem_, documentView_, [this] { return document_.currentFolder(); }),
       latencySettings_(fileSystem_, settingsFile("latency-offset.txt")), latency_(latencySettings_),
       trackEditor_(model::Project{project_, &undoManager_}),
@@ -176,6 +180,7 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .showLatency = [this] { showLatency(); }},
           {.transcribe = [this] { transcription_.transcribeActiveTakes(); },
            .cancel = [this] { transcription_.cancel(); },
+           .detectGridAgain = [this] { gridCorrection_.detectAgain(); },
            .running = [this] { return transcription_.isRunning(); }},
           {.showAbout = [this]
            { showAboutDialog(ui::makeAboutInfo(JUCE_APPLICATION_VERSION_STRING, kWithAsio), dialogParent_); },
@@ -216,6 +221,7 @@ std::unique_ptr<juce::Component> AppComposition::createMainComponent()
                          .editor = trackEditor_,
                          .recording = recording_,
                          .transcription = transcription_,
+                         .grid = gridCorrection_,
                          .transport = transportControl_,
                          .meter = inputMeter_,
                          .inputNames = [this] { return inputNames(); },

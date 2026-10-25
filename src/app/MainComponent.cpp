@@ -30,6 +30,7 @@ constexpr int kClickButtonWidth = 70;
 constexpr int kTempoWidth = 110;
 constexpr int kViewButtonWidth = 64;
 constexpr int kViewGroup = 4711;
+constexpr int kMeterWidth = 110;
 
 } // namespace
 
@@ -39,7 +40,7 @@ MainComponent::MainComponent(juce::AudioDeviceManager& deviceManager,
                              std::function<void()> addVoice)
     : deviceManager_(deviceManager), deviceSupervisor_(deviceSupervisor), recording_(tracks.recording),
       transcription_(tracks.transcription), transport_(tracks.transport), editor_(tracks.editor),
-      project_(tracks.project), tracks_(std::move(tracks)),
+      grid_(tracks.grid), project_(tracks.project), tracks_(std::move(tracks)),
       score_(tracks_.context().project, tracks_.context().projectFolder)
 {
     addVoiceButton_.setButtonText("+");
@@ -48,11 +49,13 @@ MainComponent::MainComponent(juce::AudioDeviceManager& deviceManager,
     setUpTransport();
     setUpClick();
     setUpViews();
+    setUpMeter();
     for (auto* component : std::initializer_list<juce::Component*>{&addVoiceButton_,
                                                                    &startButton_,
                                                                    &playButton_,
                                                                    &recordButton_,
                                                                    &position_,
+                                                                   &meter_,
                                                                    &tracksButton_,
                                                                    &notesButton_,
                                                                    &bothButton_,
@@ -107,6 +110,18 @@ void MainComponent::setUpClick()
     clickTempo_.onValueChange = [this] { editor_.setClickBpm(clickTempo_.getValue()); };
 }
 
+void MainComponent::setUpMeter()
+{
+    meter_.setTooltip(i18n::trJuce("Meter: choose one of the readings of the beat analysis"));
+    meter_.setTextWhenNothingSelected(i18n::trJuce("Meter"));
+    meter_.setTextWhenNoChoicesAvailable(i18n::trJuce("No beat grid yet"));
+    meter_.onChange = [this]
+    {
+        if (meter_.getSelectedItemIndex() >= 0)
+            grid_.chooseMeter(static_cast<std::size_t>(meter_.getSelectedItemIndex()));
+    };
+}
+
 void MainComponent::setUpViews()
 {
     const auto setUp = [this](juce::TextButton& button, const juce::String& tip, model::Project::View view)
@@ -156,7 +171,19 @@ void MainComponent::resized()
     auto area = getLocalBounds();
     status_.setBounds(area.removeFromBottom(kStatusHeight).reduced(kPadding, 0));
     area.reduce(kPadding, kPadding);
-    auto bar = area.removeFromTop(kBarHeight);
+    layOutBar(area.removeFromTop(kBarHeight));
+    area.removeFromTop(kPadding);
+    shownView_ = model::Project{project_, nullptr}.view();
+    const auto widths = ui::viewWidths(shownView_, area.getWidth(), kPadding);
+    tracks_.setVisible(widths.tracks > 0);
+    score_.setVisible(widths.notes > 0);
+    tracks_.setBounds(area.removeFromLeft(widths.tracks));
+    score_.setBounds(area.removeFromRight(widths.notes));
+    showView();
+}
+
+void MainComponent::layOutBar(juce::Rectangle<int> bar)
+{
     const auto place = [&bar](juce::Component& component, int width)
     {
         component.setBounds(bar.removeFromLeft(width).reduced(0, kPadding / 2));
@@ -168,20 +195,13 @@ void MainComponent::resized()
     place(playButton_, kSmallButtonWidth);
     place(recordButton_, kRecordButtonWidth);
     place(position_, kTimeWidth);
+    place(meter_, kMeterWidth);
     clickTempo_.setBounds(bar.removeFromRight(kTempoWidth).reduced(0, kPadding / 2));
     bar.removeFromRight(kPadding / 2);
     clickButton_.setBounds(bar.removeFromRight(kClickButtonWidth).reduced(0, kPadding / 2));
     bar.removeFromRight(kPadding * 3);
     for (auto* button : {&bothButton_, &notesButton_, &tracksButton_})
         button->setBounds(bar.removeFromRight(kViewButtonWidth).reduced(0, kPadding / 2));
-    area.removeFromTop(kPadding);
-    shownView_ = model::Project{project_, nullptr}.view();
-    const auto widths = ui::viewWidths(shownView_, area.getWidth(), kPadding);
-    tracks_.setVisible(widths.tracks > 0);
-    score_.setVisible(widths.notes > 0);
-    tracks_.setBounds(area.removeFromLeft(widths.tracks));
-    score_.setBounds(area.removeFromRight(widths.notes));
-    showView();
 }
 
 void MainComponent::showView()
@@ -202,6 +222,7 @@ void MainComponent::timerCallback()
     transcription_.poll();
     showTransportState();
     showClick();
+    showMeters();
     // An opened project brings its own view.
     if (model::Project{project_, nullptr}.view() != shownView_)
     {
@@ -227,6 +248,23 @@ void MainComponent::showTransportState()
     playButton_.setButtonText(juce::String::fromUTF8(playing ? "■" : "▶"));
     position_.setText(juce::String::fromUTF8(ui::formatRecordingTime(transport_.positionSeconds()).c_str()),
                       juce::dontSendNotification);
+}
+
+void MainComponent::showMeters()
+{
+    auto choices = grid_.meterChoices();
+    if (choices == shownMeters_ || meter_.isPopupActive())
+        return;
+    shownMeters_ = std::move(choices);
+    meter_.clear(juce::dontSendNotification);
+    int id = 1;
+    for (const auto& choice : shownMeters_)
+    {
+        meter_.addItem(juce::String::fromUTF8(choice.label.c_str()), id);
+        if (choice.ticked)
+            meter_.setSelectedId(id, juce::dontSendNotification);
+        ++id;
+    }
 }
 
 void MainComponent::showClick()

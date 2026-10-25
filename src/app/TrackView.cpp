@@ -5,6 +5,7 @@
 #include "io/Utf8Path.h"
 #include "model/Project.h"
 
+#include <algorithm>
 #include <utility>
 
 namespace snotes::app
@@ -21,9 +22,17 @@ constexpr int kCaptionHeight = 14;
 constexpr int kSmallButton = 30;
 constexpr int kMonitorWidth = 130;
 constexpr int kMeterIntervalMs = 33;
+constexpr int kMetersWidth = 2 * kMeterWidth + 3 * 2;
+constexpr int kLaneGap = 2;
 constexpr int kThumbnailResolution = 512;
 constexpr int kThumbnailCacheSize = 32;
 constexpr float kMillisecondsPerSecond = 1000.0F;
+constexpr int kRulerHeight = 22;
+/// How far from a beat line the mouse grabs it.
+constexpr float kGrabPixels = 5.0F;
+constexpr int kDeleteBeatItem = 1;
+constexpr int kDownbeatItem = 2;
+constexpr int kInsertBeatItem = 3;
 
 juce::String fromUtf8(const std::string& text)
 {
@@ -276,11 +285,11 @@ public:
         auto area = getLocalBounds().withTrimmedBottom(1);
         layOutHeader(area.removeFromLeft(kHeaderWidth).reduced(kPadding * 2, kPadding));
 
-        auto meters = area.removeFromLeft(2 * kMeterWidth + 3 * 2).reduced(2, kPadding);
+        auto meters = area.removeFromLeft(kMetersWidth).reduced(2, kPadding);
         diMeter_.setBounds(meters.removeFromLeft(kMeterWidth));
         meters.removeFromLeft(2);
         wetMeter_.setBounds(meters.removeFromLeft(kMeterWidth));
-        area.removeFromLeft(2);
+        area.removeFromLeft(kLaneGap);
         wetLane_.setBounds(area.removeFromTop(area.getHeight() / 2).withTrimmedBottom(1));
         diLane_.setBounds(area);
     }
@@ -411,8 +420,126 @@ private:
     WaveformLane diLane_;
 };
 
+BeatRuler::BeatRuler(TrackView& view) : view_(view)
+{
+    setTooltip(i18n::trJuce("Beat grid: drag a beat to move it, double-click to insert one, right-click to "
+                            "delete one or to start a bar on it"));
+}
+
+void BeatRuler::paint(juce::Graphics& g)
+{
+    g.setColour(theme::colours().widget);
+    g.fillRect(getLocalBounds().withLeft(TrackView::lanesLeft()));
+    const auto height = static_cast<float>(getHeight());
+    for (const auto& beat : view_.beatLines())
+    {
+        g.setColour(beat.downbeat ? theme::colours().text : theme::colours().textDim);
+        const auto x = xFor(beat.seconds);
+        g.drawLine(x, beat.downbeat ? 0.0F : height * 0.5F, x, height, beat.downbeat ? 2.0F : 1.0F);
+    }
+    if (dragged_)
+    {
+        g.setColour(theme::colours().accent);
+        g.drawLine(dragX_, 0.0F, dragX_, height, 2.0F);
+    }
+    g.setColour(theme::colours().text);
+    g.drawVerticalLine(juce::roundToInt(xFor(view_.positionSeconds())), 0.0F, height);
+}
+
+void BeatRuler::mouseMove(const juce::MouseEvent& event)
+{
+    setMouseCursor(beatAt(event.position.x) ? juce::MouseCursor::LeftRightResizeCursor
+                                            : juce::MouseCursor::NormalCursor);
+}
+
+void BeatRuler::mouseDown(const juce::MouseEvent& event)
+{
+    if (event.position.x < static_cast<float>(TrackView::lanesLeft()))
+        return;
+    const auto beat = beatAt(event.position.x);
+    if (event.mods.isPopupMenu())
+    {
+        showMenu(beat, secondsAt(event.position.x));
+        return;
+    }
+    dragged_ = beat;
+    dragX_ = event.position.x;
+    if (!beat)
+        view_.context().transport.locate(std::max(0.0, secondsAt(event.position.x)));
+}
+
+void BeatRuler::mouseDrag(const juce::MouseEvent& event)
+{
+    if (!dragged_)
+        return;
+    dragX_ = event.position.x;
+    repaint();
+}
+
+void BeatRuler::mouseUp(const juce::MouseEvent& event)
+{
+    const auto dragged = std::exchange(dragged_, std::nullopt);
+    if (dragged && event.mouseWasDraggedSinceMouseDown())
+        view_.context().grid.moveBeat(*dragged, secondsAt(event.position.x));
+    repaint();
+}
+
+void BeatRuler::mouseDoubleClick(const juce::MouseEvent& event)
+{
+    if (event.position.x >= static_cast<float>(TrackView::lanesLeft()) && !beatAt(event.position.x))
+        view_.context().grid.insertBeat(secondsAt(event.position.x));
+}
+
+double BeatRuler::secondsAt(float x) const
+{
+    const auto left = static_cast<float>(TrackView::lanesLeft());
+    return static_cast<double>((x - left) / (static_cast<float>(getWidth()) - left)) * view_.visibleSeconds();
+}
+
+float BeatRuler::xFor(double seconds) const
+{
+    const auto left = static_cast<float>(TrackView::lanesLeft());
+    return left +
+           static_cast<float>(seconds / view_.visibleSeconds()) * (static_cast<float>(getWidth()) - left);
+}
+
+std::optional<std::size_t> BeatRuler::beatAt(float x) const
+{
+    const auto left = static_cast<float>(TrackView::lanesLeft());
+    const auto secondsPerPixel =
+        view_.visibleSeconds() / static_cast<double>(static_cast<float>(getWidth()) - left);
+    return view_.context().grid.beatNear(secondsAt(x), kGrabPixels * secondsPerPixel);
+}
+
+void BeatRuler::showMenu(std::optional<std::size_t> beat, double seconds)
+{
+    juce::PopupMenu menu;
+    if (beat)
+    {
+        menu.addItem(kDownbeatItem, i18n::trJuce("Bar starts here"));
+        menu.addItem(kDeleteBeatItem, i18n::trJuce("Delete beat"));
+    }
+    else
+        menu.addItem(kInsertBeatItem, i18n::trJuce("Insert beat here"));
+    menu.showMenuAsync(juce::PopupMenu::Options{}.withTargetComponent(this).withMousePosition(),
+                       [&grid = view_.context().grid, beat, seconds](int item)
+                       {
+                           if (item == kDownbeatItem)
+                               grid.setDownbeat(*beat);
+                           else if (item == kDeleteBeatItem)
+                               grid.deleteBeat(*beat);
+                           else if (item == kInsertBeatItem)
+                               grid.insertBeat(seconds);
+                       });
+}
+
+int TrackView::lanesLeft()
+{
+    return kHeaderWidth + kMetersWidth + kLaneGap;
+}
+
 TrackView::TrackView(TrackViewContext context)
-    : context_(std::move(context)), thumbnails_(kThumbnailCacheSize),
+    : context_(std::move(context)), thumbnails_(kThumbnailCacheSize), ruler_(*this),
       lastTick_(juce::Time::getMillisecondCounterHiRes()), visibleSeconds_(ui::visibleSeconds(0.0, 0.0)),
       projectListener_(context_.project, [this] { triggerAsyncUpdate(); })
 {
@@ -422,6 +549,7 @@ TrackView::TrackView(TrackViewContext context)
     empty_.setText(i18n::trJuce("No voices yet. Add one with \"+\" at the top left."),
                    juce::dontSendNotification);
     empty_.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(ruler_);
     addAndMakeVisible(viewport_);
     addChildComponent(empty_);
     handleAsyncUpdate();
@@ -441,8 +569,10 @@ void TrackView::paint(juce::Graphics& g)
 
 void TrackView::resized()
 {
-    viewport_.setBounds(getLocalBounds());
-    empty_.setBounds(getLocalBounds());
+    auto area = getLocalBounds();
+    ruler_.setBounds(area.removeFromTop(kRulerHeight));
+    viewport_.setBounds(area);
+    empty_.setBounds(area);
     const int width = viewport_.getMaximumVisibleWidth();
     content_.setSize(width, kRowHeight * static_cast<int>(rows_.size()));
     int y = 0;
@@ -488,6 +618,7 @@ void TrackView::updateTimeline()
     shownPosition_ = position;
     for (auto& row : rows_)
         row->repaintLanes();
+    ruler_.repaint();
 }
 
 void TrackView::handleAsyncUpdate()
@@ -508,6 +639,7 @@ void TrackView::handleAsyncUpdate()
     for (std::size_t index = 0; index < rows.size(); ++index)
         rows_[index]->show(rows[index], inputs, folder, voiceColour(index));
     empty_.setVisible(rows.empty());
+    ruler_.repaint();
     resized();
 }
 
