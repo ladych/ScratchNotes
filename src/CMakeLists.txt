@@ -39,6 +39,7 @@ add_library(snotes_core STATIC
     rhythm/CleanUp.cpp
     rhythm/Fft.cpp
     rhythm/Meter.cpp
+    rhythm/NoteEdit.cpp
     rhythm/OnsetStrength.cpp
     rhythm/Quantizer.cpp
     rhythm/RhythmAnalysis.cpp
@@ -64,6 +65,7 @@ add_library(snotes_core STATIC
     ui/LatencyCalibration.cpp
     ui/LatencyCompensation.cpp
     ui/LevelMeter.cpp
+    ui/NoteCorrection.cpp
     ui/RecordingController.cpp
     ui/RecordingTime.cpp
     ui/RhythmUpdate.cpp

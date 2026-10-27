@@ -96,5 +96,50 @@ TEST(ScoreDisplayTest, FNA04_TheCursorCoversTheNotesThatStartedLastInTheirBars)
     EXPECT_EQ(cursorArea({}, 0.0), std::nullopt);
 }
 
+notation::WrittenNote written(int part, int pitch, double seconds)
+{
+    return {.span = {}, .part = part, .staff = 1, .index = 0, .pitch = pitch, .seconds = seconds};
+}
+
+DrawnNote drawn(const Area& area, const notation::WrittenNote& note)
+{
+    return {.span = note.span, .area = area, .bar = {}, .written = note};
+}
+
+TEST(ScoreDisplayTest, FKO04_AClickFindsTheSmallestNoteUnderIt)
+{
+    const auto big = written(0, 40, 1.0);
+    const auto small = written(0, 45, 1.0);
+    const std::vector<DrawnNote> notes{
+        drawn({.left = 10.0F, .top = 10.0F, .right = 30.0F, .bottom = 30.0F}, big),
+        drawn({.left = 15.0F, .top = 15.0F, .right = 20.0F, .bottom = 20.0F}, small),
+        drawn({.left = 12.0F, .top = 12.0F, .right = 28.0F, .bottom = 28.0F}, written(1, 50, 2.0))};
+
+    EXPECT_EQ(noteAt(notes, 17.0F, 17.0F), small);
+    EXPECT_EQ(noteAt(notes, 11.0F, 11.0F), big);
+    EXPECT_EQ(noteAt(notes, 9.0F, 20.0F), std::nullopt);
+    EXPECT_EQ(noteAt(notes, 31.0F, 20.0F), std::nullopt);
+    EXPECT_EQ(noteAt(notes, 20.0F, 9.0F), std::nullopt);
+    EXPECT_EQ(noteAt(notes, 20.0F, 31.0F), std::nullopt);
+    EXPECT_EQ(noteAt({}, 20.0F, 20.0F), std::nullopt);
+}
+
+TEST(ScoreDisplayTest, FKO04_TheSelectionShowsEveryDrawingOfTheNote)
+{
+    const auto note = written(0, 40, 1.0);
+    const Area first{.left = 1.0F, .top = 1.0F, .right = 2.0F, .bottom = 2.0F};
+    const Area tied{.left = 5.0F, .top = 1.0F, .right = 6.0F, .bottom = 2.0F};
+    auto onTab = note;
+    onTab.staff = 2;
+    const std::vector<DrawnNote> notes{drawn(first, note),
+                                       drawn(tied, onTab),
+                                       drawn({}, note),
+                                       drawn(first, written(1, 40, 1.0)),
+                                       drawn(first, written(0, 41, 1.0)),
+                                       drawn(first, written(0, 40, 2.0))};
+
+    EXPECT_EQ(noteAreas(notes, note), (std::vector<Area>{first, tied}));
+}
+
 } // namespace
 } // namespace snotes::ui

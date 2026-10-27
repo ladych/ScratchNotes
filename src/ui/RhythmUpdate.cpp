@@ -7,6 +7,7 @@
 #include "notation/MusicXml.h"
 #include "notation/Score.h"
 #include "notation/ScoreMidi.h"
+#include "rhythm/NoteEdit.h"
 #include "rhythm/RhythmAnalysis.h"
 #include "rhythm/RhythmCsv.h"
 #include "rhythm/Statistics.h"
@@ -124,16 +125,18 @@ std::optional<rhythm::BeatGrid> gridOf(const model::Project& project,
     return analysis;
 }
 
-/// The events of the take with their tablature next to its DI file; they go into the score. Nothing if the
-/// file cannot be written.
+/// The events of the take after its corrections (F-KO-04, F-KO-05) with their tablature next to its DI file;
+/// they go into the score. Nothing if the file cannot be written.
 std::optional<notation::VoiceEvents> writeEvents(Analysed& analysed,
                                                  const rhythm::BeatGrid& grid,
                                                  io::IFileSystem& fileSystem,
                                                  const std::filesystem::path& folder)
 {
     const auto fretboard = tab::fretboardOf(analysed.profile);
-    const auto rhythm = rhythm::voiceRhythm(analysed.track, grid);
-    auto tabs = tab::tabulate(rhythm.quantization.events, fretboard);
+    auto rhythm = rhythm::voiceRhythm(analysed.track, grid);
+    auto edited = rhythm::applyNoteEdits(rhythm.quantization.events, analysed.take.noteEdits());
+    rhythm.quantization.events = std::move(edited.events);
+    auto tabs = tab::tabulate(rhythm.quantization.events, fretboard, edited.strings);
     const auto file = fileNextTo(analysed.take.diFile(), "events.csv");
     if (!fileSystem.writeText(folder / io::pathFromUtf8(file),
                               rhythm::eventsToCsv(rhythm, tabs, fretboard.strings.size())))

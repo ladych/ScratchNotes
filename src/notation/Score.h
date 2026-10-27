@@ -33,6 +33,8 @@ struct ScoreEvent
     ScoreChord chord;
     /// Grace notes just before the chord.
     std::vector<ScoreChord> graces;
+    /// rhythm::QuantizedEvent::seconds of the event, which the corrections of its notes refer to (F-KO-04).
+    double seconds = 0.0;
 
     bool operator==(const ScoreEvent&) const = default;
 };

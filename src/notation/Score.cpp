@@ -44,6 +44,7 @@ ScoreVoice voiceOf(const VoiceEvents& input, std::int64_t origin)
         scored.durationTicks = end - start;
         scored.chord.pitches = event.pitches;
         scored.chord.shape = tab.notes;
+        scored.seconds = event.seconds;
         scored.graces.reserve(event.graces.size());
         for (std::size_t grace = 0; grace < event.graces.size(); ++grace)
             scored.graces.push_back({.pitches = event.graces[grace], .shape = tab.graces[grace]});

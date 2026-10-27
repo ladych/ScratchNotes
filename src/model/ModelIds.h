@@ -16,6 +16,7 @@ inline const juce::Identifier take{"TAKE"};
 inline const juce::Identifier beatGrid{"BEAT_GRID"};
 inline const juce::Identifier meterReading{"METER_READING"};
 inline const juce::Identifier mix{"MIX"};
+inline const juce::Identifier noteEdit{"NOTE_EDIT"};
 
 // Properties
 inline const juce::Identifier formatVersion{"formatVersion"};
@@ -54,6 +55,12 @@ inline const juce::Identifier scoreFile{"scoreFile"};
 inline const juce::Identifier scoreOrigin{"scoreOrigin"};
 inline const juce::Identifier view{"view"};
 inline const juce::Identifier playback{"playback"};
+inline const juce::Identifier seconds{"seconds"};
+inline const juce::Identifier pitch{"pitch"};
+inline const juce::Identifier deleted{"deleted"};
+inline const juce::Identifier toPitch{"toPitch"};
+inline const juce::Identifier string{"string"};
+inline const juce::Identifier durationTicks{"durationTicks"};
 
 /// Runtime-only marker for a take whose audio file was missing when the project was loaded
 /// (F-PJ-03). It is never written to projekt.snotes.
