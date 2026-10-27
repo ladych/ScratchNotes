@@ -42,16 +42,23 @@ using Shape = std::vector<Placement>;
 
 inline constexpr int kMaxStretch = 4;
 
+/// Fixed strings of the pitches of a chord, in their order, kUnplayable for a pitch whose string is free;
+/// empty if all are free.
+using Strings = std::vector<int>;
+
 /// Notes struck together at a time.
 struct Chord
 {
     double seconds = 0.0;
     std::vector<int> pitches;
+    /// The strings the user chose (F-TB-03).
+    Strings strings;
 };
 
 /// The cheapest way through the chords (F-TB-02): dynamic programming over the shapes of each chord, where
 /// moving the hand costs per fret (less after a pause), wide and high shapes cost a little and unplayable
-/// notes a lot. Open strings keep the hand where it is.
+/// notes a lot. Open strings keep the hand where it is. A chord with fixed strings only takes shapes that
+/// play its pitches there, if there is one; the rest of the way adapts to it (F-TB-03).
 [[nodiscard]] std::vector<Shape> fingering(const std::vector<Chord>& chords, const Fretboard& fretboard);
 
 /// The tablature of a quantized event and its grace notes.
@@ -63,8 +70,10 @@ struct EventTab
     bool operator==(const EventTab&) const = default;
 };
 
-/// String and fret for every note of the events, grace notes included, in one fingering (F-TB-01).
+/// String and fret for every note of the events, grace notes included, in one fingering (F-TB-01). strings
+/// has the fixed strings of the events in their order (F-TB-03); events beyond it are free.
 [[nodiscard]] std::vector<EventTab> tabulate(const std::vector<rhythm::QuantizedEvent>& events,
-                                             const Fretboard& fretboard);
+                                             const Fretboard& fretboard,
+                                             const std::vector<Strings>& strings = {});
 
 } // namespace snotes::tab

@@ -24,6 +24,16 @@ double clampGain(double gain)
     return std::clamp(gain, 0.0, kMaxGain);
 }
 
+rhythm::NoteEdit noteEditOf(const juce::ValueTree& child)
+{
+    return {.seconds = child[ids::seconds],
+            .pitch = child.getProperty(ids::pitch, rhythm::NoteEdit::kNone),
+            .deleted = child[ids::deleted],
+            .toPitch = child.getProperty(ids::toPitch, rhythm::NoteEdit::kNone),
+            .string = child.getProperty(ids::string, rhythm::NoteEdit::kNone),
+            .durationTicks = static_cast<juce::int64>(child[ids::durationTicks])};
+}
+
 } // namespace
 
 Take::Take(juce::ValueTree tree, juce::UndoManager* undoManager) : TreeNode(std::move(tree), undoManager) {}
@@ -132,6 +142,33 @@ void Take::clearNotes()
     mutableTree().removeProperty(ids::noteCount, nullptr);
     mutableTree().removeProperty(ids::onsetsFile, nullptr);
     clearEvents();
+}
+
+std::vector<rhythm::NoteEdit> Take::noteEdits() const
+{
+    std::vector<rhythm::NoteEdit> edits;
+    for (const auto& child : tree())
+        if (child.hasType(ids::noteEdit))
+            edits.push_back(noteEditOf(child));
+    return edits;
+}
+
+void Take::setNoteEdit(const rhythm::NoteEdit& edit)
+{
+    juce::ValueTree changed{ids::noteEdit};
+    changed.setProperty(ids::seconds, edit.seconds, nullptr);
+    changed.setProperty(ids::pitch, edit.pitch, nullptr);
+    changed.setProperty(ids::deleted, edit.deleted, nullptr);
+    changed.setProperty(ids::toPitch, edit.toPitch, nullptr);
+    changed.setProperty(ids::string, edit.string, nullptr);
+    changed.setProperty(ids::durationTicks, static_cast<juce::int64>(edit.durationTicks), nullptr);
+    for (auto child : tree())
+        if (child.hasType(ids::noteEdit) && noteEditOf(child).sameNote(edit))
+        {
+            child.copyPropertiesFrom(changed, undoManager());
+            return;
+        }
+    mutableTree().appendChild(changed, undoManager());
 }
 
 void Take::setStartSample(std::int64_t startSample)

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -335,9 +336,12 @@ void writeNote(juce::XmlElement& measure,
     auto* note = measure.createNewChildElement("note");
     note->setAttribute(
         "id",
-        juce::String{noteId({.start = piece.inScore, .end = piece.inScore + piece.value.ticks})} + "_" +
-            juce::String{static_cast<int>(staff.part)} + "_" + juce::String{staff.number} + "_" +
-            juce::String{static_cast<int>(index)});
+        writtenNoteId({.span = {.start = piece.inScore, .end = piece.inScore + piece.value.ticks},
+                       .part = static_cast<int>(staff.part),
+                       .staff = staff.number,
+                       .index = static_cast<int>(index),
+                       .pitch = chordNote.pitch,
+                       .seconds = piece.event->seconds}));
     if (!leading)
         note->createNewChildElement("chord");
     addPitch(*note, chordNote.pitch);
@@ -481,6 +485,32 @@ void writeMeasure(
         writePiece(*element, piece, {.number = 2, .strings = voice.fretboard.strings.size(), .part = index});
 }
 
+constexpr double kMicrosPerSecond = 1e6;
+constexpr std::size_t kWrittenNoteFields = 7;
+
+/// The numbers after the "n" of the id, separated by "_"; false unless there are exactly as many.
+bool readFields(std::string_view id, std::span<std::int64_t> fields)
+{
+    if (!id.starts_with('n'))
+        return false;
+    const auto* position = id.data() + 1;
+    const auto* const end = id.data() + id.size();
+    for (std::size_t index = 0; index < fields.size(); ++index)
+    {
+        if (index > 0)
+        {
+            if (position == end || *position != '_')
+                return false;
+            ++position;
+        }
+        const auto result = std::from_chars(position, end, fields[index]);
+        if (result.ec != std::errc{})
+            return false;
+        position = result.ptr;
+    }
+    return position == end;
+}
+
 } // namespace
 
 std::string noteId(const NoteSpan& span)
@@ -501,6 +531,26 @@ std::optional<NoteSpan> noteSpanOf(std::string_view id)
     if (stop.ec != std::errc{})
         return std::nullopt;
     return span;
+}
+
+std::string writtenNoteId(const WrittenNote& note)
+{
+    return noteId(note.span) + "_" + std::to_string(note.part) + "_" + std::to_string(note.staff) + "_" +
+           std::to_string(note.index) + "_" + std::to_string(note.pitch) + "_" +
+           std::to_string(std::llround(note.seconds * kMicrosPerSecond));
+}
+
+std::optional<WrittenNote> writtenNoteOf(std::string_view id)
+{
+    std::array<std::int64_t, kWrittenNoteFields> fields{};
+    if (!readFields(id, fields))
+        return std::nullopt;
+    return WrittenNote{.span = {.start = fields[0], .end = fields[1]},
+                       .part = static_cast<int>(fields[2]),
+                       .staff = static_cast<int>(fields[3]),
+                       .index = static_cast<int>(fields[4]),
+                       .pitch = static_cast<int>(fields[5]),
+                       .seconds = static_cast<double>(fields[6]) / kMicrosPerSecond};
 }
 
 std::vector<NoteValue> noteValues(std::int64_t start, std::int64_t length)

@@ -164,6 +164,33 @@ TEST(TablatureTest, FTB01_GraceNotesAreFingeredWithTheirNote)
     EXPECT_EQ(tabs[0].graces, (std::vector<Shape>{{at(3, 0)}, {at(3, 1)}}));
 }
 
+TEST(TablatureTest, FTB03_AFixedStringMovesTheRestOfTheWay)
+{
+    // A3 then C4: G string 2, then B string 1. With A3 fixed on the D string 7, C4 follows to the G string 5.
+    rhythm::QuantizedEvent a;
+    a.seconds = 0.0;
+    a.pitches = {57};
+    auto b = a;
+    b.seconds = 0.2;
+    b.pitches = {60};
+
+    EXPECT_EQ(tabulate({a, b}, kGuitar)[1].notes, (Shape{at(4, 1)}));
+    const auto fixed = tabulate({a, b}, kGuitar, {{2}});
+    EXPECT_EQ(fixed[0].notes, (Shape{at(2, 7)}));
+    EXPECT_EQ(fixed[1].notes, (Shape{at(3, 5)}));
+}
+
+TEST(TablatureTest, FTB03_AStringThatCannotPlayThePitchIsIgnored)
+{
+    // B2 has no place on the G string, so the fixed string is ignored.
+    EXPECT_EQ(fingering({{.seconds = 0.0, .pitches = {47}, .strings = {3}}}, kGuitar),
+              fingering({{.seconds = 0.0, .pitches = {47}}}, kGuitar));
+    // Only the fixed pitch of a chord is bound, the other one finds its place.
+    const auto chord =
+        fingering({{.seconds = 0.0, .pitches = {45, 57}, .strings = {Placement::kUnplayable, 2}}}, kGuitar);
+    EXPECT_EQ(chord.front()[1], at(2, 7));
+}
+
 TEST(TablatureTest, FTB01_NoEventsNoTablature)
 {
     EXPECT_TRUE(tabulate({}, kGuitar).empty());

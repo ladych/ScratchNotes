@@ -283,6 +283,33 @@ TEST_F(ProjectTest, FTX09_TakesRememberOnsetsAndEventsWithTheirNotes)
     EXPECT_FALSE(take.tree().hasProperty(ids::eventsFile));
 }
 
+TEST_F(ProjectTest, FKO04_TakesKeepTheCorrectionsOfTheirNotesWithUndo)
+{
+    auto voice = addGuitar();
+    auto take = voice.addTake(takeData("t1"));
+    EXPECT_TRUE(take.noteEdits().empty());
+    undoManager.beginNewTransaction();
+
+    const rhythm::NoteEdit deleted{.seconds = 1.5, .pitch = 40, .deleted = true};
+    const rhythm::NoteEdit moved{.seconds = 2.0, .pitch = 45, .toPitch = 47, .string = 2, .durationTicks = 6};
+    auto node = take.tree();
+    node.appendChild(juce::ValueTree{"OTHER"}, nullptr);
+    take.setNoteEdit(deleted);
+    take.setNoteEdit(moved);
+    EXPECT_EQ(take.noteEdits(), (std::vector<rhythm::NoteEdit>{deleted, moved}));
+    undoManager.beginNewTransaction();
+
+    // The same note gets its edit replaced.
+    const rhythm::NoteEdit again{.seconds = 2.00001, .pitch = 45, .toPitch = 48};
+    take.setNoteEdit(again);
+    EXPECT_EQ(take.noteEdits(), (std::vector<rhythm::NoteEdit>{deleted, again}));
+
+    undoManager.undo();
+    EXPECT_EQ(take.noteEdits(), (std::vector<rhythm::NoteEdit>{deleted, moved}));
+    undoManager.undo();
+    EXPECT_TRUE(take.noteEdits().empty());
+}
+
 TEST_F(ProjectTest, FAU04_MovesTakes)
 {
     auto voice = addGuitar();

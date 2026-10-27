@@ -3,10 +3,12 @@
 #include "engine/MonitorSource.h"
 #include "model/BeatGrid.h"
 #include "model/TreeNode.h"
+#include "rhythm/NoteEdit.h"
 
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace snotes::model
 {
@@ -61,6 +63,11 @@ public:
     void clearEvents();
     /// Also forgets the onsets and events, which belong to the notes.
     void clearNotes();
+
+    /// The corrections of its notes (F-KO-04, F-TB-03), in the order they were first made.
+    [[nodiscard]] std::vector<rhythm::NoteEdit> noteEdits() const;
+    /// Replaces the edit of the same note or adds it; undoable.
+    void setNoteEdit(const rhythm::NoteEdit& edit);
 };
 
 struct VoiceData

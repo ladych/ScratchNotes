@@ -101,4 +101,38 @@ std::vector<std::unique_ptr<juce::XmlElement>> scorePages(notation::ScoreRendere
     return pages;
 }
 
+std::optional<notation::WrittenNote> noteAt(const std::vector<DrawnNote>& notes, float x, float y)
+{
+    const DrawnNote* best = nullptr;
+    float bestSize = 0.0F;
+    for (const auto& note : notes)
+    {
+        const auto& area = note.area;
+        if (x < area.left || x > area.right || y < area.top || y > area.bottom)
+            continue;
+        const auto size = (area.right - area.left) * (area.bottom - area.top);
+        if (best == nullptr || size < bestSize)
+        {
+            best = &note;
+            bestSize = size;
+        }
+    }
+    if (best == nullptr)
+        return std::nullopt;
+    return best->written;
+}
+
+std::vector<Area> noteAreas(const std::vector<DrawnNote>& notes, const notation::WrittenNote& note)
+{
+    std::vector<Area> areas;
+    for (const auto& drawn : notes)
+    {
+        const auto& written = drawn.written;
+        if (written.part == note.part && written.pitch == note.pitch && written.seconds == note.seconds &&
+            !drawn.area.empty())
+            areas.push_back(drawn.area);
+    }
+    return areas;
+}
+
 } // namespace snotes::ui

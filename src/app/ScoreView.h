@@ -2,6 +2,7 @@
 
 #include "model/TreeChangeListener.h"
 #include "notation/ScoreRenderer.h"
+#include "ui/NoteCorrection.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -17,13 +18,15 @@ namespace snotes::app
 /// Humble object (E-03): the score view (GUI-Entwurf v0.1, item 9). Draws the project's score with Verovio
 /// (F-NA-01, F-NA-02) page below page across its width in the colours of the theme, after every analysis and
 /// when its width changes. A cursor follows the song position over the notes that sound (F-NA-04), and the
-/// view scrolls along with it.
+/// view scrolls along with it. A click selects a note to correct (F-KO-04, F-TB-03): Delete removes it, the
+/// arrow keys move it by a semitone (with Shift by an octave), and its menu sets its duration and string.
 class ScoreView final : public juce::Component, private juce::AsyncUpdater, private juce::Timer
 {
 public:
     ScoreView(juce::ValueTree project,
               std::function<std::optional<std::filesystem::path>()> projectFolder,
-              std::function<double()> positionSeconds);
+              std::function<double()> positionSeconds,
+              ui::NoteCorrection& notes);
     ~ScoreView() override;
 
     ScoreView(const ScoreView&) = delete;
@@ -34,6 +37,8 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
     void lookAndFeelChanged() override;
+    void mouseDown(const juce::MouseEvent& event) override;
+    bool keyPressed(const juce::KeyPress& key) override;
 
 private:
     class Pages;
@@ -41,10 +46,14 @@ private:
     void handleAsyncUpdate() override;
     void timerCallback() override;
     void showScore(const juce::File& file);
+    void showMenu();
+    /// Runs a correction and shows the selection after it.
+    void correct(const std::function<void(ui::NoteCorrection&)>& change);
 
     juce::ValueTree project_;
     std::function<std::optional<std::filesystem::path>()> projectFolder_;
     std::function<double()> positionSeconds_;
+    ui::NoteCorrection& notes_;
     notation::ScoreRenderer renderer_;
     juce::Viewport viewport_;
     std::unique_ptr<Pages> pages_;
