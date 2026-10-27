@@ -106,6 +106,14 @@ double secondsAt(std::span<const double> beats, double beat)
     return beats[index] + ((beat - static_cast<double>(index)) * (beats[index + 1] - beats[index]));
 }
 
+double beatAt(std::span<const double> beats, double seconds)
+{
+    const auto after = std::upper_bound(beats.begin(), beats.end(), seconds) - beats.begin();
+    const auto index = static_cast<std::size_t>(
+        std::clamp<std::ptrdiff_t>(after - 1, 0, static_cast<std::ptrdiff_t>(beats.size()) - 2));
+    return static_cast<double>(index) + ((seconds - beats[index]) / (beats[index + 1] - beats[index]));
+}
+
 std::vector<std::uint8_t> scoreToMidi(const Score& score, std::span<const double> beats)
 {
     const auto origin = static_cast<double>(score.originTick) / static_cast<double>(kTicksPerBeat);

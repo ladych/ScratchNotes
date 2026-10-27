@@ -33,16 +33,18 @@ struct EditActions
     std::function<void()> addVoice;
 };
 
-/// Actions of the menu "Transport" (F-WI-01, F-WI-07).
+/// Actions of the menu "Transport" (F-WI-01, F-WI-07, F-NA-05).
 struct TransportActions
 {
     std::function<void()> togglePlay;
     std::function<void()> returnToStart;
     std::function<void()> toggleRecord;
     std::function<void()> toggleClick;
+    std::function<void()> toggleTranscription;
     std::function<bool()> playing;
     std::function<bool()> recording;
     std::function<bool()> clickOn;
+    std::function<bool()> playsTranscription;
 };
 
 /// Actions of the menu "Audio".

@@ -3,6 +3,7 @@
 #include "notation/Score.h"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -26,6 +27,24 @@ struct NoteValue
 /// the longest value that fits comes first: dotted eighth, triplet quarter, eighth, triplet eighth,
 /// sixteenth, triplet sixteenth, triplet thirty-second.
 [[nodiscard]] std::vector<NoteValue> noteValues(std::int64_t start, std::int64_t length);
+
+/// Where a written note starts and ends in the score, in ticks from its start.
+struct NoteSpan
+{
+    std::int64_t start = 0;
+    std::int64_t end = 0;
+
+    bool operator==(const NoteSpan&) const = default;
+};
+
+/// Every bar of the MusicXML has the id kBarIdPrefix and its number, e.g. "bar3".
+inline constexpr const char* kBarIdPrefix = "bar";
+
+/// The id of a written note in the MusicXML starts with this text, e.g. "n24_30", and goes on with "_" and
+/// more to be unique; Verovio keeps it in the SVG, so the cursor finds the notes there (F-NA-04).
+[[nodiscard]] std::string noteId(const NoteSpan& span);
+/// The span of a note from its id; none for any other id.
+[[nodiscard]] std::optional<NoteSpan> noteSpanOf(std::string_view id);
 
 /// MusicXML 4.0 of the score (F-NA-01, F-NA-02): a part per voice with a staff of notes in its clef an
 /// octave down and a staff of tablature in its tuning, the upbeat as an implicit bar 0. Notes and rests are

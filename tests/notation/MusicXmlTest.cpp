@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -320,12 +321,17 @@ TEST(MusicXmlTest, FNA01_TripletsAreBracketedPerBeat)
     EXPECT_EQ(notes[4]->getChildByName("notations")->getChildByName("tuplet")->getStringAttribute("type"),
               "stop");
     EXPECT_EQ(notes[5]->getChildByName("time-modification"), nullptr);
-    // The tablature has the triplet values without brackets.
+    // The tablature has the same triplets, without brackets and numbers; Verovio gets their length wrong
+    // without them.
     const auto frets = notesOn(measure(*xml, 0, 0), 2);
     ASSERT_EQ(frets.size(), 6U);
     EXPECT_NE(frets[0]->getChildByName("time-modification"), nullptr);
-    EXPECT_EQ(frets[0]->getChildByName("notations")->getChildByName("tuplet"), nullptr);
-    EXPECT_EQ(frets[4]->getChildByName("notations"), nullptr);
+    const auto* hidden = frets[0]->getChildByName("notations")->getChildByName("tuplet");
+    EXPECT_EQ(hidden->getStringAttribute("type"), "start");
+    EXPECT_EQ(hidden->getStringAttribute("bracket"), "no");
+    EXPECT_EQ(hidden->getStringAttribute("show-number"), "none");
+    EXPECT_EQ(frets[4]->getChildByName("notations")->getChildByName("tuplet")->getStringAttribute("type"),
+              "stop");
 }
 
 TEST(MusicXmlTest, FNA01_TripletRestsShareTheBracket)
@@ -383,6 +389,38 @@ TEST(MusicXmlTest, FEX02_NoTempoWithoutOne)
     EXPECT_EQ(measure(*xml, 0, 0).getChildByName("direction"), nullptr);
 }
 
+TEST(MusicXmlTest, FNA04_NotesAndBarsCarryTheirPlaceInTheScore)
+{
+    // A beat of upbeat, then a chord over the bar line.
+    auto score = guitarScore({openLowE(0, 12), note(12, 60, {40, 45}, {{.string = 0, .fret = 0}})}, 12, 2);
+    score.voices.push_back(score.voices.front());
+    auto xml = parse(score);
+    ASSERT_NE(xml, nullptr);
+
+    EXPECT_EQ(measure(*xml, 0, 0).getStringAttribute("id"), "bar0");
+    EXPECT_EQ(measure(*xml, 0, 2).getStringAttribute("id"), "bar2");
+    EXPECT_EQ(notesOn(measure(*xml, 0, 0), 1)[0]->getStringAttribute("id"), "n0_12_0_1_0");
+    const auto chord = notesOn(measure(*xml, 0, 1), 1);
+    EXPECT_EQ(chord[0]->getStringAttribute("id"), "n12_60_0_1_0");
+    EXPECT_EQ(chord[1]->getStringAttribute("id"), "n12_60_0_1_1");
+    EXPECT_EQ(notesOn(measure(*xml, 0, 2), 2)[0]->getStringAttribute("id"), "n60_72_0_2_0");
+    EXPECT_EQ(notesOn(measure(*xml, 1, 2), 2)[0]->getStringAttribute("id"), "n60_72_1_2_0");
+}
+
+TEST(MusicXmlTest, FNA04_TheSpanOfANoteFromItsId)
+{
+    EXPECT_EQ(noteId({.start = 24, .end = 30}), "n24_30");
+    EXPECT_EQ(noteSpanOf("n24_30_0_1_0"), (NoteSpan{.start = 24, .end = 30}));
+    EXPECT_EQ(noteSpanOf("n24_30"), (NoteSpan{.start = 24, .end = 30}));
+    EXPECT_EQ(noteSpanOf("bar3"), std::nullopt);
+    EXPECT_EQ(noteSpanOf("n24"), std::nullopt);
+    EXPECT_EQ(noteSpanOf("n24-30"), std::nullopt);
+    EXPECT_EQ(noteSpanOf("n_30"), std::nullopt);
+    EXPECT_EQ(noteSpanOf("n24_"), std::nullopt);
+    EXPECT_NE((NoteSpan{.start = 1, .end = 2}), (NoteSpan{.start = 1, .end = 3}));
+    EXPECT_NE((NoteSpan{.start = 1, .end = 2}), (NoteSpan{.start = 0, .end = 2}));
+}
+
 TEST(MusicXmlTest, FNA01_VerovioDrawsTheScore)
 {
     const auto score = guitarScore(
@@ -396,6 +434,13 @@ TEST(MusicXmlTest, FNA01_VerovioDrawsTheScore)
     EXPECT_THAT(svg, HasSubstr("class=\"beam"));
     EXPECT_THAT(svg, HasSubstr("class=\"tuplet"));
     EXPECT_THAT(svg, HasSubstr("class=\"tie"));
+    // Verovio keeps the ids, so the cursor finds the notes and bars (F-NA-04).
+    EXPECT_THAT(svg, HasSubstr("id=\"n0_4_0_1_0\" class=\"note"));
+    EXPECT_THAT(svg, HasSubstr("id=\"n0_4_0_2_0\" class=\"note"));
+    EXPECT_THAT(svg, HasSubstr("id=\"bar1\" class=\"measure"));
+    // Only the staff of notes shows the number of the triplet.
+    EXPECT_NE(svg.find("class=\"tupletNum"), std::string::npos);
+    EXPECT_EQ(svg.find("class=\"tupletNum"), svg.rfind("class=\"tupletNum"));
 }
 
 } // namespace

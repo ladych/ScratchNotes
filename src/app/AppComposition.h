@@ -26,6 +26,7 @@
 #include "ui/LatencyCompensation.h"
 #include "ui/RecordingController.h"
 #include "ui/ScoreExport.h"
+#include "ui/ScoreSounds.h"
 #include "ui/TakeAudioCache.h"
 #include "ui/ThemeSetting.h"
 #include "ui/TrackList.h"
@@ -96,6 +97,8 @@ private:
     // Playback (AP3): the snapshots carry the takes, read once and shared while they play.
     JuceTakeAudioLoader takeLoader_;
     ui::TakeAudioCache takeAudio_;
+    // Playing the transcription to compare (AP9): the notes of the score's MIDI file.
+    ui::ScoreSounds scoreSounds_;
     model::SnapshotPublisher snapshotPublisher_;
     model::UuidGenerator idGenerator_;
     io::ProjectRepository projectRepository_;

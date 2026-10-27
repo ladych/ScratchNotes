@@ -156,5 +156,34 @@ TEST(PlaybackMixerTest, FWI06_UnmonitoredOrUnroutedInputsAreNotHeard)
     EXPECT_THAT(out.left, Each(0.0F));
 }
 
+TEST(PlaybackMixerTest, FNA05_TheTranscriptionPlaysInsteadOfTheTakes)
+{
+    ProjectSnapshot snapshot;
+    snapshot.sampleRate = 1000.0;
+    snapshot.masterGain = 0.5F;
+    snapshot.playsTranscription = true;
+    auto voice = voiceWith(take({0.1F, 0.2F, 0.3F, 0.4F}));
+    voice.gain = 0.5F;
+    const auto notes = std::make_shared<const SynthNotes>(
+        SynthNotes{.notes = {{.start = 0, .end = 100, .frequency = 110.0}}, .longest = 100});
+    voice.notes = notes;
+    snapshot.voices.push_back(voice);
+    // A voice without notes is silent, as is a muted one.
+    snapshot.voices.push_back(voiceWith(take({1.0F, 1.0F, 1.0F, 1.0F})));
+    auto muted = voice;
+    muted.audible = false;
+    snapshot.voices.push_back(muted);
+    PlaybackMixer mixer;
+    Outputs out;
+
+    mixer.renderTakes(snapshot, 1, out.channels.data(), 3, 4);
+
+    for (std::size_t index = 0; index < out.left.size(); ++index)
+        EXPECT_FLOAT_EQ(
+            out.left[index],
+            0.25F * NoteSynth::sampleAt(notes->notes.front(), 1 + static_cast<std::int64_t>(index), 1000.0));
+    EXPECT_EQ(out.left, out.right);
+}
+
 } // namespace
 } // namespace snotes::engine

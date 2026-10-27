@@ -181,6 +181,18 @@ TEST_F(TrackListTest, FWI07_SwitchesTheClickAndSetsItsTempo)
     EXPECT_TRUE(project.mix().isClickOn());
 }
 
+TEST_F(TrackListTest, FNA05_SwitchesBetweenRecordingAndTranscriptionWithoutUndo)
+{
+    EXPECT_FALSE(editor.playsTranscription());
+
+    editor.setPlaysTranscription(true);
+    EXPECT_TRUE(editor.playsTranscription());
+    EXPECT_EQ(project.playback(), model::Project::Playback::transcription);
+    EXPECT_FALSE(undoManager.canUndo());
+    editor.setPlaysTranscription(false);
+    EXPECT_FALSE(editor.playsTranscription());
+}
+
 TEST_F(TrackListTest, FAU01_InvalidProfileIsIgnored)
 {
     editor.chooseProfile("g", -1);

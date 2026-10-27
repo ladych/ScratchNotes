@@ -16,6 +16,8 @@ inline constexpr int kMidiTicksPerBeat = 960;
 /// and after the last beat the grid goes on with its first and last interval. beats are the times of the grid
 /// in seconds, at least two.
 [[nodiscard]] double secondsAt(std::span<const double> beats, double beat);
+/// The beat of the grid at a time in seconds, the inverse of secondsAt. beats as there, rising.
+[[nodiscard]] double beatAt(std::span<const double> beats, double seconds);
 
 /// The score as a standard MIDI file of type 1 (F-EX-01): a tempo track with the meter and a tempo on every
 /// beat, then one track per voice with its name, a guitar or bass sound and its own channel. The file runs in

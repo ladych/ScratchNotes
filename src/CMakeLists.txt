@@ -7,6 +7,7 @@ add_library(snotes_core STATIC
     engine/ClickTrack.cpp
     engine/InputMeter.cpp
     engine/LatencyProbe.cpp
+    engine/NoteSynth.cpp
     engine/PlaybackMixer.cpp
     engine/RecordingSession.cpp
     engine/TakeAudio.cpp
@@ -68,6 +69,7 @@ add_library(snotes_core STATIC
     ui/RhythmUpdate.cpp
     ui/ScoreDisplay.cpp
     ui/ScoreExport.cpp
+    ui/ScoreSounds.cpp
     ui/TakeAudioCache.cpp
     ui/ThemeSetting.cpp
     ui/TrackList.cpp

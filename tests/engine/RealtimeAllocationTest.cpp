@@ -1,5 +1,6 @@
 #include "engine/AudioEngine.h"
 #include "engine/InputMeter.h"
+#include "engine/NoteSynth.h"
 #include "engine/Recorder.h"
 #include "engine/RecordingSession.h"
 #include "engine/SpscQueue.h"
@@ -8,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <cstdint>
 #include <cstdlib>
 #include <memory>
 #include <new>
@@ -58,6 +60,24 @@ TEST(RealtimeAllocationTest, Q04_TestToneDoesNotAllocate)
     countAllocations = true;
     for (int block = 0; block < 200; ++block)
         tone.render(channels.data(), 2, 128);
+    countAllocations = false;
+
+    EXPECT_EQ(allocationCount, 0);
+}
+
+TEST(RealtimeAllocationTest, Q04_PlayingTheTranscriptionDoesNotAllocate)
+{
+    SynthNotes notes;
+    for (std::int64_t note = 0; note < 100; ++note)
+        notes.notes.push_back({.start = note * 480, .end = (note * 480) + 960, .frequency = 110.0});
+    notes.longest = 960;
+    std::array<float, 128> left{};
+    std::array<float, 128> right{};
+    const std::array<float*, 2> channels{left.data(), right.data()};
+
+    countAllocations = true;
+    for (int block = 0; block < 400; ++block)
+        NoteSynth::render(notes, 48000.0, block * 128, 1.0F, channels.data(), 2, 128);
     countAllocations = false;
 
     EXPECT_EQ(allocationCount, 0);

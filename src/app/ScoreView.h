@@ -16,11 +16,14 @@ namespace snotes::app
 
 /// Humble object (E-03): the score view (GUI-Entwurf v0.1, item 9). Draws the project's score with Verovio
 /// (F-NA-01, F-NA-02) page below page across its width in the colours of the theme, after every analysis and
-/// when its width changes.
-class ScoreView final : public juce::Component, private juce::AsyncUpdater
+/// when its width changes. A cursor follows the song position over the notes that sound (F-NA-04), and the
+/// view scrolls along with it.
+class ScoreView final : public juce::Component, private juce::AsyncUpdater, private juce::Timer
 {
 public:
-    ScoreView(juce::ValueTree project, std::function<std::optional<std::filesystem::path>()> projectFolder);
+    ScoreView(juce::ValueTree project,
+              std::function<std::optional<std::filesystem::path>()> projectFolder,
+              std::function<double()> positionSeconds);
     ~ScoreView() override;
 
     ScoreView(const ScoreView&) = delete;
@@ -36,10 +39,12 @@ private:
     class Pages;
 
     void handleAsyncUpdate() override;
+    void timerCallback() override;
     void showScore(const juce::File& file);
 
     juce::ValueTree project_;
     std::function<std::optional<std::filesystem::path>()> projectFolder_;
+    std::function<double()> positionSeconds_;
     notation::ScoreRenderer renderer_;
     juce::Viewport viewport_;
     std::unique_ptr<Pages> pages_;

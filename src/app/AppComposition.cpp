@@ -98,8 +98,12 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
           }),
       project_(model::ProjectFactory::createDefault({})),
       takeAudio_(takeLoader_, [this] { return document_.currentFolder(); }),
+      scoreSounds_(fileSystem_, [this] { return document_.currentFolder(); }),
       snapshotPublisher_(
-          project_, snapshots_, [this](const std::string& file) { return takeAudio_.audio(file); }),
+          project_,
+          snapshots_,
+          [this](const std::string& file) { return takeAudio_.audio(file); },
+          [this] { return scoreSounds_.voices(project_); }),
       projectRepository_(fileSystem_), lastProjectSettings_(fileSystem_, settingsFile("last-project.txt")),
       document_(
           project_,
@@ -175,9 +179,12 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .toggleRecord = [this] { recording_.toggle(); },
            .toggleClick = [this]
            { trackEditor_.setClickOn(!model::Project{project_, nullptr}.mix().isClickOn()); },
+           .toggleTranscription = [this]
+           { trackEditor_.setPlaysTranscription(!trackEditor_.playsTranscription()); },
            .playing = [this] { return transportControl_.isPlaying(); },
            .recording = [this] { return recording_.state() != ui::RecordingController::State::idle; },
-           .clickOn = [this] { return model::Project{project_, nullptr}.mix().isClickOn(); }},
+           .clickOn = [this] { return model::Project{project_, nullptr}.mix().isClickOn(); },
+           .playsTranscription = [this] { return trackEditor_.playsTranscription(); }},
           {.showSettings = [this] { showAudioSettings(); },
            .toggleTestTone = [this] { testTone_.setEnabled(!testTone_.isEnabled()); },
            .testToneOn = [this] { return testTone_.isEnabled(); },

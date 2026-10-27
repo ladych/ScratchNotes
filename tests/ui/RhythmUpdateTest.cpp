@@ -4,19 +4,26 @@
 #include "model/ModelIds.h"
 #include "model/Project.h"
 #include "model/ProjectFactory.h"
+#include "notation/MusicXml.h"
+#include "notation/Score.h"
 #include "rhythm/RhythmCsv.h"
 #include "rhythm/RhythmReference.h"
 #include "transcription/NoteCsv.h"
+#include "ui/ScoreDisplay.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 
+#include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
+#include <vector>
 
 namespace snotes::ui
 {
@@ -191,6 +198,50 @@ TEST_F(RhythmUpdateTest, FEX01_WritesTheScoreAsMidiInSyncWithTheGridAndWithItsTe
     EXPECT_GT(played, 1.0);
     EXPECT_LT(played, static_cast<double>(beats[4]) / project.sampleRate());
     EXPECT_NE(files.at(folder / "score.musicxml").find("<per-minute>"), std::string::npos);
+}
+
+TEST_F(RhythmUpdateTest, FNA04_TheCursorMeetsEveryNoteOfTheScoreWhereItSounds)
+{
+    ASSERT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+    const auto& midi = files.at(folder / "score.mid");
+    juce::MemoryInputStream stream{midi.data(), midi.size(), false};
+    juce::MidiFile file;
+    ASSERT_TRUE(file.readFrom(stream));
+    file.convertTimestampTicksToSeconds();
+    const auto score = juce::parseXML(files.at(folder / "score.musicxml"));
+    ASSERT_NE(score, nullptr);
+    std::set<std::int64_t> written;
+    for (const auto* part : score->getChildWithTagNameIterator("part"))
+        for (const auto* bar : part->getChildWithTagNameIterator("measure"))
+            for (const auto* note : bar->getChildWithTagNameIterator("note"))
+                if (const auto span = notation::noteSpanOf(note->getStringAttribute("id").toStdString()))
+                    written.insert(span->start);
+
+    // Every note of the MIDI file, played at its time in the recording, is a written note, or a grace note
+    // a thirty-second or more before one.
+    int played = 0;
+    for (const auto* event : *file.getTrack(1))
+        if (event->message.isNoteOn())
+        {
+            const auto tick = *scoreQuarterAt(tree, event->message.getTimeStamp()) * notation::kTicksPerBeat;
+            const auto next = written.lower_bound(std::llround(tick));
+            ASSERT_NE(next, written.end());
+            const auto before = static_cast<double>(*next) - tick;
+            EXPECT_NEAR(std::remainder(before, notation::kTicksPerBeat / 8.0), 0.0, 1e-3) << tick;
+            EXPECT_LT(before, notation::kTicksPerBeat / 2.0);
+            ++played;
+        }
+    EXPECT_GT(played, 50);
+}
+
+TEST_F(RhythmUpdateTest, FNA04_NoPlaceInTheScoreWithoutIt)
+{
+    EXPECT_EQ(scoreQuarterAt(tree, 1.0), std::nullopt);
+    project.beatGrid().setAnalysis({0, 48000}, {});
+    EXPECT_EQ(scoreQuarterAt(tree, 1.0), std::nullopt);
+    project.beatGrid().setScoreFile("score.musicxml");
+    project.beatGrid().setScoreOrigin(1);
+    EXPECT_DOUBLE_EQ(*scoreQuarterAt(tree, 1.5), 0.5);
 }
 
 TEST_F(RhythmUpdateTest, FEX01_ReportsAMidiFileThatCannotBeWritten)

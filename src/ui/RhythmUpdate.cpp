@@ -166,6 +166,7 @@ bool writeScore(const std::vector<notation::VoiceEvents>& voices,
     if (!fileSystem.writeText(folder / kMidiFile, midiBytes))
         return false;
     grid.setScoreFile(kScoreFile);
+    grid.setScoreOrigin(static_cast<int>(score.originTick / notation::kTicksPerBeat));
     return true;
 }
 

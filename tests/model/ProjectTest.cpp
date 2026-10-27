@@ -60,6 +60,18 @@ TEST_F(ProjectTest, FNA02_TheViewIsSavedWithoutUndo)
     EXPECT_EQ(project.view(), Project::View::both);
 }
 
+TEST_F(ProjectTest, FNA05_WhatPlaysIsSavedWithoutUndo)
+{
+    EXPECT_EQ(project.playback(), Project::Playback::recording);
+
+    project.setPlayback(Project::Playback::transcription);
+    EXPECT_EQ(project.playback(), Project::Playback::transcription);
+    EXPECT_EQ(tree[ids::playback].toString(), "transcription");
+    project.setPlayback(Project::Playback::recording);
+    EXPECT_EQ(project.playback(), Project::Playback::recording);
+    EXPECT_FALSE(undoManager.canUndo());
+}
+
 TEST_F(ProjectTest, FPJ01_RenamesTheProject)
 {
     project.setName("Probe Dienstag");

@@ -10,8 +10,9 @@ namespace snotes::model
 
 SnapshotPublisher::SnapshotPublisher(juce::ValueTree project,
                                      ProjectSnapshotExchange& exchange,
-                                     TakeAudioSource audio)
-    : project_(std::move(project)), exchange_(exchange), audio_(std::move(audio)),
+                                     TakeAudioSource audio,
+                                     ScoreNotesSource notes)
+    : project_(std::move(project)), exchange_(exchange), audio_(std::move(audio)), notes_(std::move(notes)),
       listener_(project_, [this] { publish(); })
 {
     publish();
@@ -19,7 +20,7 @@ SnapshotPublisher::SnapshotPublisher(juce::ValueTree project,
 
 void SnapshotPublisher::publish()
 {
-    exchange_.publish(SnapshotBuilder::build(Project{project_, nullptr}, audio_));
+    exchange_.publish(SnapshotBuilder::build(Project{project_, nullptr}, audio_, notes_));
 }
 
 } // namespace snotes::model

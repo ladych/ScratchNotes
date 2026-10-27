@@ -82,6 +82,19 @@ TEST_F(BeatGridTest, FNA02_KeepsTheScoreUntilTheGridIsCleared)
     EXPECT_EQ(grid.scoreFile(), "");
 }
 
+TEST_F(BeatGridTest, FNA04_TheScoreStartsOnABeatUntilTheGridIsCleared)
+{
+    auto grid = project.beatGrid();
+    EXPECT_EQ(grid.scoreOrigin(), 0);
+
+    grid.setScoreOrigin(3);
+    EXPECT_EQ(grid.scoreOrigin(), 3);
+    EXPECT_FALSE(undoManager.canUndo());
+
+    grid.clear();
+    EXPECT_EQ(grid.scoreOrigin(), 0);
+}
+
 TEST_F(BeatGridTest, FKO02_ACorrectionKeepsTheReadingsAndTheScore)
 {
     auto grid = project.beatGrid();

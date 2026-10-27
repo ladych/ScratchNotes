@@ -171,6 +171,16 @@ void TrackEditor::setClickBpm(double beatsPerMinute)
     project_.mix().setClickBpm(beatsPerMinute);
 }
 
+void TrackEditor::setPlaysTranscription(bool on)
+{
+    project_.setPlayback(on ? model::Project::Playback::transcription : model::Project::Playback::recording);
+}
+
+bool TrackEditor::playsTranscription() const
+{
+    return project_.playback() == model::Project::Playback::transcription;
+}
+
 void TrackEditor::setGain(const std::string& voiceId, double gain)
 {
     edit(voiceId, [gain](model::Voice& voice) { voice.setGain(gain); });
