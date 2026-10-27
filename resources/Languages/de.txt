@@ -200,6 +200,9 @@ countries: de at ch li lu be
 "Bar starts here" = "Takt beginnt hier"
 "Delete beat" = "Beat löschen"
 "Insert beat here" = "Beat hier einfügen"
+"Tap the beat" = "Beat mitklopfen"
+"Tap every beat along during playback; the taps replace the beat grid when it stops" = "Während der Wiedergabe jeden Schlag mitklopfen; beim Stopp ersetzen die Schläge das Beat-Raster"
+"Tapping the beat: %1 beats, they replace the grid when the playback stops" = "Mitklopfen: %1 Schläge, sie ersetzen das Raster beim Stopp"
 " (%1 more)" = " (%1 weitere)"
 " · %1 notes" = " · %1 Noten"
 

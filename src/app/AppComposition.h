@@ -19,6 +19,7 @@
 #include "io/StdFileSystem.h"
 #include "model/SnapshotPublisher.h"
 #include "model/UuidGenerator.h"
+#include "ui/BeatTapper.h"
 #include "ui/DocumentController.h"
 #include "ui/GridCorrection.h"
 #include "ui/LatencyCalibration.h"
@@ -106,6 +107,7 @@ private:
     ui::TranscriptionController transcription_;
     // Correction (AP9): the beat grid of all voices.
     ui::GridCorrection gridCorrection_;
+    ui::BeatTapper beatTapper_;
     // Export (AP8): the score files of the last note detection, copied where the user wants them.
     ui::ScoreExport scoreExport_;
     // Recording (AP2): the audio thread fills the session's rings, the writer thread writes the files.

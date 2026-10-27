@@ -59,6 +59,11 @@ public:
     void deleteBeat(std::size_t beat);
     /// The beat becomes the first beat of a bar.
     void setDownbeat(std::size_t beat);
+    /// Beats tapped along during playback, in song seconds (F-KO-03), replace the beats from half a beat
+    /// before the first tap to half a beat after the last one; a tap too close to the one before is left out.
+    /// Nothing happens with fewer than two taps or without a grid. The downbeats before the taps stay where
+    /// they are.
+    void replaceBeats(std::vector<double> taps);
     /// Forgets the corrections and detects the beats and the meter again.
     void detectAgain();
 

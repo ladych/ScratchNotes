@@ -57,6 +57,7 @@ add_library(snotes_core STATIC
     transcription/Transcriber.cpp
     ui/AboutInfo.cpp
     ui/AudioStatus.cpp
+    ui/BeatTapper.cpp
     ui/DocumentController.cpp
     ui/GridCorrection.cpp
     ui/LatencyCalibration.cpp

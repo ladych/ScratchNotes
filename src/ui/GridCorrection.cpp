@@ -107,6 +107,30 @@ void GridCorrection::setDownbeat(std::size_t beat)
     store(all, meter, static_cast<int>(beat) % meter);
 }
 
+void GridCorrection::replaceBeats(std::vector<double> taps)
+{
+    std::ranges::sort(taps);
+    const auto gap = sampleAt(kShortestBeatSeconds);
+    std::vector<std::int64_t> tapped;
+    for (const double tap : taps)
+    {
+        const auto sample = sampleAt(tap);
+        if (tapped.empty() || sample - tapped.back() >= gap)
+            tapped.push_back(sample);
+    }
+    auto all = beats();
+    if (tapped.size() < 2 || all.size() < 2)
+        return;
+    const auto margin = (tapped.back() - tapped.front()) / (2 * static_cast<std::int64_t>(tapped.size() - 1));
+    std::erase_if(all,
+                  [&tapped, margin](std::int64_t beat)
+                  { return beat > tapped.front() - margin && beat < tapped.back() + margin; });
+    all.insert(all.end(), tapped.begin(), tapped.end());
+    std::ranges::sort(all);
+    const auto grid = model::Project{project_, nullptr}.beatGrid();
+    store(all, grid.chosenMeter(), grid.downbeatPhase());
+}
+
 void GridCorrection::detectAgain()
 {
     model::Project{project_, nullptr}.beatGrid().clear();

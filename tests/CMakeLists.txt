@@ -54,6 +54,7 @@ add_executable(snotes_tests
     transcription/TranscriberTest.cpp
     ui/AboutInfoTest.cpp
     ui/AudioStatusTest.cpp
+    ui/BeatTapperTest.cpp
     ui/DocumentControllerTest.cpp
     ui/GridCorrectionTest.cpp
     ui/LatencyCalibrationTest.cpp
