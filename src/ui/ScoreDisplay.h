@@ -61,12 +61,22 @@ struct DrawnNote
     notation::NoteSpan span;
     Area area;
     Area bar;
+    /// What its id tells.
+    notation::WrittenNote written;
 };
 
 /// The cursor at a tick of the score: over the notes that started last, as high as their bars; none before
 /// the first note and from the end of the last one on. Notes drawn without an area (frets on the tablature)
 /// give it no width.
 [[nodiscard]] std::optional<Area> cursorArea(const std::vector<DrawnNote>& notes, double tick);
+
+/// The note under a point of the view, the smallest one if they overlap; none beside the notes (F-KO-04).
+[[nodiscard]] std::optional<notation::WrittenNote>
+noteAt(const std::vector<DrawnNote>& notes, float x, float y);
+
+/// Where a note is drawn with all its tied values and on both staffs.
+[[nodiscard]] std::vector<Area> noteAreas(const std::vector<DrawnNote>& notes,
+                                          const notation::WrittenNote& note);
 
 /// The pages of a score as SVG that juce::Drawable can draw, pageWidth pixels wide, in the colour ink
 /// ("#rrggbb"); none if the text is no score.

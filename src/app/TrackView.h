@@ -5,6 +5,7 @@
 #include "ui/BeatTapper.h"
 #include "ui/GridCorrection.h"
 #include "ui/LevelMeter.h"
+#include "ui/NoteCorrection.h"
 #include "ui/RecordingController.h"
 #include "ui/RhythmUpdate.h"
 #include "ui/TrackList.h"
@@ -34,6 +35,8 @@ struct TrackViewContext
     ui::RecordingController& recording;
     ui::TranscriptionController& transcription;
     ui::GridCorrection& grid;
+    /// Corrections of single notes in the score view.
+    ui::NoteCorrection& notes;
     ui::BeatTapper& tapper;
     ui::TransportControl& transport;
     engine::InputMeter& meter;

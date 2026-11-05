@@ -24,6 +24,7 @@
 #include "ui/GridCorrection.h"
 #include "ui/LatencyCalibration.h"
 #include "ui/LatencyCompensation.h"
+#include "ui/NoteCorrection.h"
 #include "ui/RecordingController.h"
 #include "ui/ScoreExport.h"
 #include "ui/ScoreSounds.h"
@@ -110,6 +111,7 @@ private:
     ui::TranscriptionController transcription_;
     // Correction (AP9): the beat grid of all voices.
     ui::GridCorrection gridCorrection_;
+    ui::NoteCorrection noteCorrection_;
     ui::BeatTapper beatTapper_;
     // Export (AP8): the score files of the last note detection, copied where the user wants them.
     ui::ScoreExport scoreExport_;

@@ -226,6 +226,28 @@ nextStates(const std::vector<Shape>& shapes, const std::vector<State>& before, d
     return states;
 }
 
+/// True if the shape plays every pitch with a fixed string on that string.
+bool fits(const Shape& shape, const Strings& strings)
+{
+    const auto count = std::min(shape.size(), strings.size());
+    for (std::size_t index = 0; index < count; ++index)
+        if (strings[index] != Placement::kUnplayable && shape[index].string != strings[index])
+            return false;
+    return true;
+}
+
+/// The shapes that fit the fixed strings; all of them if none does.
+std::vector<Shape> shapesOn(std::vector<Shape> shapes, const Strings& strings)
+{
+    std::vector<Shape> fitting;
+    for (const auto& shape : shapes)
+        if (fits(shape, strings))
+            fitting.push_back(shape);
+    if (fitting.empty())
+        return shapes;
+    return fitting;
+}
+
 } // namespace
 
 Fretboard fretboardOf(const model::InstrumentProfile& profile)
@@ -254,7 +276,7 @@ std::vector<Shape> fingering(const std::vector<Chord>& chords, const Fretboard& 
     double previousSeconds = 0.0;
     for (const auto& chord : chords)
     {
-        shapes.push_back(playableShapes(chord.pitches, fretboard));
+        shapes.push_back(shapesOn(playableShapes(chord.pitches, fretboard), chord.strings));
         states.push_back(nextStates(shapes.back(), before, chord.seconds - previousSeconds));
         before = states.back();
         previousSeconds = chord.seconds;
@@ -272,17 +294,23 @@ std::vector<Shape> fingering(const std::vector<Chord>& chords, const Fretboard& 
     return result;
 }
 
-std::vector<EventTab> tabulate(const std::vector<rhythm::QuantizedEvent>& events, const Fretboard& fretboard)
+std::vector<EventTab> tabulate(const std::vector<rhythm::QuantizedEvent>& events,
+                               const Fretboard& fretboard,
+                               const std::vector<Strings>& strings)
 {
     std::vector<Chord> chords;
-    for (const auto& event : events)
+    for (std::size_t index = 0; index < events.size(); ++index)
     {
+        const auto& event = events[index];
         const auto count = event.graces.size();
         for (std::size_t grace = 0; grace < count; ++grace)
             chords.push_back(
                 {.seconds = event.seconds - (kGraceLeadSeconds * static_cast<double>(count - grace)),
-                 .pitches = event.graces[grace]});
-        chords.push_back({.seconds = event.seconds, .pitches = event.pitches});
+                 .pitches = event.graces[grace],
+                 .strings = {}});
+        chords.push_back({.seconds = event.seconds, .pitches = event.pitches, .strings = {}});
+        if (index < strings.size())
+            chords.back().strings = strings[index];
     }
     auto shapes = fingering(chords, fretboard);
     std::vector<EventTab> result;

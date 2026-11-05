@@ -28,6 +28,42 @@ constexpr int kPadding = 8;
 constexpr int kCursorIntervalMs = 30;
 constexpr float kCursorMargin = 3.0F;
 constexpr float kCursorAlpha = 0.3F;
+constexpr float kSelectionAlpha = 0.6F;
+constexpr float kSelectionMargin = 2.0F;
+constexpr int kOctave = 12;
+constexpr int kDeleteItem = 1;
+constexpr int kUpItem = 2;
+constexpr int kDownItem = 3;
+constexpr int kDurationItems = 100;
+constexpr int kStringItems = 200;
+
+/// The choices as items from firstItem on.
+juce::PopupMenu choiceMenu(const std::vector<ui::NoteChoice>& choices, int firstItem)
+{
+    juce::PopupMenu menu;
+    for (std::size_t index = 0; index < choices.size(); ++index)
+        menu.addItem(firstItem + static_cast<int>(index),
+                     juce::String::fromUTF8(choices[index].label.c_str()),
+                     true,
+                     choices[index].ticked);
+    return menu;
+}
+
+/// Does what the item of the note's menu says.
+void choose(ui::NoteCorrection& notes,
+            int item,
+            const std::vector<ui::NoteChoice>& durations,
+            const std::vector<ui::NoteChoice>& strings)
+{
+    if (item == kDeleteItem)
+        notes.deleteNote();
+    else if (item == kUpItem || item == kDownItem)
+        notes.transpose(item == kUpItem ? 1 : -1);
+    else if (item >= kStringItems)
+        notes.setString(static_cast<int>(strings[static_cast<std::size_t>(item - kStringItems)].value));
+    else
+        notes.setDuration(durations[static_cast<std::size_t>(item - kDurationItems)].value);
+}
 
 juce::File verovioData()
 {
@@ -46,6 +82,7 @@ public:
         tops_.clear();
         notes_.clear();
         cursor_.reset();
+        selection_.clear();
         float height = 0.0F;
         for (const auto& svg : svgs)
             if (svg != nullptr)
@@ -83,6 +120,22 @@ public:
 
     [[nodiscard]] std::optional<juce::Rectangle<float>> cursor() const { return cursor_; }
 
+    [[nodiscard]] std::optional<notation::WrittenNote> noteAt(juce::Point<float> point) const
+    {
+        return ui::noteAt(notes_, point.x, point.y);
+    }
+
+    void showSelection(const std::optional<notation::WrittenNote>& note)
+    {
+        selection_.clear();
+        if (note)
+            for (const auto& area : ui::noteAreas(notes_, *note))
+                selection_.push_back(
+                    juce::Rectangle<float>::leftTopRightBottom(area.left, area.top, area.right, area.bottom)
+                        .expanded(kSelectionMargin));
+        repaint();
+    }
+
     void paint(juce::Graphics& g) override
     {
         if (cursor_)
@@ -90,6 +143,9 @@ public:
             g.setColour(theme::colours().accent.withAlpha(kCursorAlpha));
             g.fillRoundedRectangle(*cursor_, kCursorMargin);
         }
+        g.setColour(theme::colours().accent.withAlpha(kSelectionAlpha));
+        for (const auto& area : selection_)
+            g.fillRoundedRectangle(area, kSelectionMargin);
         for (std::size_t page = 0; page < drawables_.size(); ++page)
             if (drawables_[page] != nullptr)
                 drawables_[page]->draw(g, 1.0F, toPage(page));
@@ -118,8 +174,8 @@ private:
             {
                 const auto id = child->getComponentID();
                 const auto area = areaOf(page, *child, transform);
-                if (const auto span = notation::noteSpanOf(id.toStdString()))
-                    notes_.push_back({.span = *span, .area = area, .bar = bar});
+                if (const auto note = notation::writtenNoteOf(id.toStdString()))
+                    notes_.push_back({.span = note->span, .area = area, .bar = bar, .written = *note});
                 groups.emplace_back(child, id.startsWith(notation::kBarIdPrefix) ? area : bar);
             }
         }
@@ -140,13 +196,15 @@ private:
     std::vector<float> tops_;
     std::vector<ui::DrawnNote> notes_;
     std::optional<juce::Rectangle<float>> cursor_;
+    std::vector<juce::Rectangle<float>> selection_;
 };
 
 ScoreView::ScoreView(juce::ValueTree project,
                      std::function<std::optional<std::filesystem::path>()> projectFolder,
-                     std::function<double()> positionSeconds)
+                     std::function<double()> positionSeconds,
+                     ui::NoteCorrection& notes)
     : project_(std::move(project)), projectFolder_(std::move(projectFolder)),
-      positionSeconds_(std::move(positionSeconds)),
+      positionSeconds_(std::move(positionSeconds)), notes_(notes),
       renderer_(io::pathFromUtf8(verovioData().getFullPathName().toStdString())),
       pages_(std::make_unique<Pages>()), projectListener_(project_, [this] { triggerAsyncUpdate(); })
 {
@@ -157,17 +215,21 @@ ScoreView::ScoreView(juce::ValueTree project,
     empty_.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(viewport_);
     addChildComponent(empty_);
+    pages_->addMouseListener(this, false);
+    setWantsKeyboardFocus(true);
     startTimer(kCursorIntervalMs);
 }
 
 ScoreView::~ScoreView()
 {
+    pages_->removeMouseListener(this);
     stopTimer();
     cancelPendingUpdate();
 }
 
 void ScoreView::timerCallback()
 {
+    notes_.poll();
     const auto quarter = ui::scoreQuarterAt(project_, positionSeconds_());
     if (!pages_->showCursor(quarter ? std::optional{*quarter * notation::kTicksPerBeat} : std::nullopt))
         return;
@@ -196,6 +258,60 @@ void ScoreView::lookAndFeelChanged()
     triggerAsyncUpdate();
 }
 
+void ScoreView::mouseDown(const juce::MouseEvent& event)
+{
+    grabKeyboardFocus();
+    const auto relative = event.getEventRelativeTo(pages_.get());
+    correct([&relative, this](ui::NoteCorrection& notes)
+            { notes.select(pages_->noteAt(relative.position)); });
+    if (event.mods.isPopupMenu() && notes_.selected())
+        showMenu();
+}
+
+bool ScoreView::keyPressed(const juce::KeyPress& key)
+{
+    if (!notes_.selected())
+        return false;
+    const int octave = key.getModifiers().isShiftDown() ? kOctave : 1;
+    if (key.isKeyCode(juce::KeyPress::deleteKey) || key.isKeyCode(juce::KeyPress::backspaceKey))
+        correct([](ui::NoteCorrection& notes) { notes.deleteNote(); });
+    else if (key.isKeyCode(juce::KeyPress::upKey))
+        correct([octave](ui::NoteCorrection& notes) { notes.transpose(octave); });
+    else if (key.isKeyCode(juce::KeyPress::downKey))
+        correct([octave](ui::NoteCorrection& notes) { notes.transpose(-octave); });
+    else if (key.isKeyCode(juce::KeyPress::escapeKey))
+        correct([](ui::NoteCorrection& notes) { notes.select(std::nullopt); });
+    else
+        return false;
+    return true;
+}
+
+void ScoreView::showMenu()
+{
+    const auto durations = notes_.durationChoices();
+    const auto strings = notes_.stringChoices();
+    juce::PopupMenu menu;
+    menu.addItem(kUpItem, i18n::trJuce("Semitone up"));
+    menu.addItem(kDownItem, i18n::trJuce("Semitone down"));
+    menu.addSubMenu(i18n::trJuce("Duration"), choiceMenu(durations, kDurationItems));
+    menu.addSubMenu(i18n::trJuce("String"), choiceMenu(strings, kStringItems));
+    menu.addSeparator();
+    menu.addItem(kDeleteItem, i18n::trJuce("Delete note"));
+    menu.showMenuAsync(juce::PopupMenu::Options{}.withTargetComponent(this).withMousePosition(),
+                       [safe = juce::Component::SafePointer<ScoreView>{this}, durations, strings](int item)
+                       {
+                           if (safe != nullptr && item != 0)
+                               safe->correct([&](ui::NoteCorrection& notes)
+                                             { choose(notes, item, durations, strings); });
+                       });
+}
+
+void ScoreView::correct(const std::function<void(ui::NoteCorrection&)>& change)
+{
+    change(notes_);
+    pages_->showSelection(notes_.selected());
+}
+
 void ScoreView::handleAsyncUpdate()
 {
     const auto path = ui::scorePath(project_, projectFolder_());
@@ -221,6 +337,7 @@ void ScoreView::showScore(const juce::File& file)
                               static_cast<int>(std::lround(static_cast<float>(width) / kZoom)),
                               "#" + theme::colours().text.toDisplayString(false).toStdString());
     pages_->show(svgs, width);
+    pages_->showSelection(notes_.selected());
     empty_.setVisible(pages_->empty());
     viewport_.setVisible(!pages_->empty());
 }

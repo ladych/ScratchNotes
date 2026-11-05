@@ -277,6 +277,58 @@ TEST_F(RhythmUpdateTest, FKO02_AnEditedGridIsKeptWhileItHasBeats)
     EXPECT_GT(project.beatGrid().beats().size(), 4U);
 }
 
+/// The notes on the staff of notes of the score.
+std::vector<notation::WrittenNote> writtenNotes(const std::string& musicXml)
+{
+    std::vector<notation::WrittenNote> notes;
+    const std::string marker = "id=\"";
+    for (auto at = musicXml.find(marker); at != std::string::npos; at = musicXml.find(marker, at + 1))
+    {
+        const auto start = at + marker.size();
+        const auto note = notation::writtenNoteOf(musicXml.substr(start, musicXml.find('"', start) - start));
+        if (note && note->staff == 1)
+            notes.push_back(*note);
+    }
+    return notes;
+}
+
+TEST_F(RhythmUpdateTest, FKO05_CorrectionsStayWhenTheGridChanges)
+{
+    ASSERT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+    const auto before = writtenNotes(files.at(folder / kScoreFile));
+    ASSERT_FALSE(before.empty());
+    const auto first = before.front();
+    const auto second = *std::ranges::find_if(
+        before, [&first](const auto& note) { return std::abs(note.seconds - first.seconds) > 1e-3; });
+    auto take = project.voice(0).take(1);
+    const auto count = take.eventCount();
+    for (const auto& note : before)
+        if (note.seconds == first.seconds)
+            take.setNoteEdit({.seconds = note.seconds, .pitch = note.pitch, .deleted = true});
+    take.setNoteEdit({.seconds = second.seconds, .pitch = second.pitch, .toPitch = second.pitch + 2});
+
+    for (const auto& beats :
+         {std::vector<std::int64_t>{}, std::vector<std::int64_t>{48000, 72000, 96000, 120000}})
+    {
+        if (!beats.empty())
+            project.beatGrid().setEdited(beats, 4, 0);
+        ASSERT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+        const auto after = writtenNotes(files.at(folder / kScoreFile));
+        const auto at = [&after](double seconds, int pitch)
+        {
+            return std::ranges::any_of(
+                after, [&](const auto& note) { return note.seconds == seconds && note.pitch == pitch; });
+        };
+        EXPECT_FALSE(at(first.seconds, first.pitch));
+        EXPECT_FALSE(at(second.seconds, second.pitch));
+        EXPECT_TRUE(at(second.seconds, second.pitch + 2));
+    }
+    // Without notes the event goes.
+    project.beatGrid().clear();
+    ASSERT_EQ(updateRhythm(tree, fileSystem, folder), RhythmUpdate::updated);
+    EXPECT_EQ(take.eventCount(), count - 1);
+}
+
 TEST_F(RhythmUpdateTest, FKO02_WithoutNotesEvenAnEditedGridGoes)
 {
     project.voice(0).take(1).setNotes("", 0);

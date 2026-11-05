@@ -183,6 +183,9 @@ TEST(ScoreTest, FNA02_VoicesAndEventsDifferInEveryPart)
     changed.durationTicks = 6;
     EXPECT_NE(event, changed);
     changed = event;
+    changed.seconds = 1.0;
+    EXPECT_NE(event, changed);
+    changed = event;
     changed.chord.pitches = {29};
     EXPECT_NE(event, changed);
     changed = event;

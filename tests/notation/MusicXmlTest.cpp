@@ -392,19 +392,21 @@ TEST(MusicXmlTest, FEX02_NoTempoWithoutOne)
 TEST(MusicXmlTest, FNA04_NotesAndBarsCarryTheirPlaceInTheScore)
 {
     // A beat of upbeat, then a chord over the bar line.
-    auto score = guitarScore({openLowE(0, 12), note(12, 60, {40, 45}, {{.string = 0, .fret = 0}})}, 12, 2);
+    auto chord = note(12, 60, {40, 45}, {{.string = 0, .fret = 0}});
+    chord.seconds = 1.25;
+    auto score = guitarScore({openLowE(0, 12), chord}, 12, 2);
     score.voices.push_back(score.voices.front());
     auto xml = parse(score);
     ASSERT_NE(xml, nullptr);
 
     EXPECT_EQ(measure(*xml, 0, 0).getStringAttribute("id"), "bar0");
     EXPECT_EQ(measure(*xml, 0, 2).getStringAttribute("id"), "bar2");
-    EXPECT_EQ(notesOn(measure(*xml, 0, 0), 1)[0]->getStringAttribute("id"), "n0_12_0_1_0");
-    const auto chord = notesOn(measure(*xml, 0, 1), 1);
-    EXPECT_EQ(chord[0]->getStringAttribute("id"), "n12_60_0_1_0");
-    EXPECT_EQ(chord[1]->getStringAttribute("id"), "n12_60_0_1_1");
-    EXPECT_EQ(notesOn(measure(*xml, 0, 2), 2)[0]->getStringAttribute("id"), "n60_72_0_2_0");
-    EXPECT_EQ(notesOn(measure(*xml, 1, 2), 2)[0]->getStringAttribute("id"), "n60_72_1_2_0");
+    EXPECT_EQ(notesOn(measure(*xml, 0, 0), 1)[0]->getStringAttribute("id"), "n0_12_0_1_0_40_0");
+    const auto written = notesOn(measure(*xml, 0, 1), 1);
+    EXPECT_EQ(written[0]->getStringAttribute("id"), "n12_60_0_1_0_40_1250000");
+    EXPECT_EQ(written[1]->getStringAttribute("id"), "n12_60_0_1_1_45_1250000");
+    EXPECT_EQ(notesOn(measure(*xml, 0, 2), 2)[0]->getStringAttribute("id"), "n60_72_0_2_0_40_1250000");
+    EXPECT_EQ(notesOn(measure(*xml, 1, 2), 2)[0]->getStringAttribute("id"), "n60_72_1_2_0_40_1250000");
 }
 
 TEST(MusicXmlTest, FNA04_TheSpanOfANoteFromItsId)
@@ -421,6 +423,31 @@ TEST(MusicXmlTest, FNA04_TheSpanOfANoteFromItsId)
     EXPECT_NE((NoteSpan{.start = 1, .end = 2}), (NoteSpan{.start = 0, .end = 2}));
 }
 
+TEST(MusicXmlTest, FKO04_TheWrittenNoteFromItsId)
+{
+    const WrittenNote note{
+        .span = {.start = 24, .end = 30}, .part = 1, .staff = 2, .index = 1, .pitch = 45, .seconds = 1.5};
+    EXPECT_EQ(writtenNoteId(note), "n24_30_1_2_1_45_1500000");
+    EXPECT_EQ(writtenNoteOf(writtenNoteId(note)), note);
+    EXPECT_EQ(writtenNoteOf("n24_30_1_2_1_45"), std::nullopt);
+    EXPECT_EQ(writtenNoteOf("n24_30_1_2_1_45_1500000_7"), std::nullopt);
+    EXPECT_EQ(writtenNoteOf("n24_30_1_2_1_45_x"), std::nullopt);
+    EXPECT_EQ(writtenNoteOf("n24_30_1_2_1_45-1"), std::nullopt);
+    EXPECT_EQ(writtenNoteOf("bar3"), std::nullopt);
+    auto other = note;
+    for (auto* field : {&other.part, &other.staff, &other.index, &other.pitch})
+    {
+        ++*field;
+        EXPECT_NE(other, note);
+        other = note;
+    }
+    other.seconds = 2.0;
+    EXPECT_NE(other, note);
+    other = note;
+    other.span.end = 31;
+    EXPECT_NE(other, note);
+}
+
 TEST(MusicXmlTest, FNA01_VerovioDrawsTheScore)
 {
     const auto score = guitarScore(
@@ -435,8 +462,8 @@ TEST(MusicXmlTest, FNA01_VerovioDrawsTheScore)
     EXPECT_THAT(svg, HasSubstr("class=\"tuplet"));
     EXPECT_THAT(svg, HasSubstr("class=\"tie"));
     // Verovio keeps the ids, so the cursor finds the notes and bars (F-NA-04).
-    EXPECT_THAT(svg, HasSubstr("id=\"n0_4_0_1_0\" class=\"note"));
-    EXPECT_THAT(svg, HasSubstr("id=\"n0_4_0_2_0\" class=\"note"));
+    EXPECT_THAT(svg, HasSubstr("id=\"n0_4_0_1_0_40_0\" class=\"note"));
+    EXPECT_THAT(svg, HasSubstr("id=\"n0_4_0_2_0_40_0\" class=\"note"));
     EXPECT_THAT(svg, HasSubstr("id=\"bar1\" class=\"measure"));
     // Only the staff of notes shows the number of the triplet.
     EXPECT_NE(svg.find("class=\"tupletNum"), std::string::npos);

@@ -42,9 +42,11 @@ MainComponent::MainComponent(juce::AudioDeviceManager& deviceManager,
     : deviceManager_(deviceManager), deviceSupervisor_(deviceSupervisor), recording_(tracks.recording),
       transcription_(tracks.transcription), transport_(tracks.transport), editor_(tracks.editor),
       grid_(tracks.grid), tapper_(tracks.tapper), project_(tracks.project), tracks_(std::move(tracks)),
-      score_(tracks_.context().project,
-             tracks_.context().projectFolder,
-             [this] { return transport_.positionSeconds(); })
+      score_(
+          tracks_.context().project,
+          tracks_.context().projectFolder,
+          [this] { return transport_.positionSeconds(); },
+          tracks_.context().notes)
 {
     addVoiceButton_.setButtonText("+");
     addVoiceButton_.setTooltip(i18n::trJuce("Add a voice on the next free input"));

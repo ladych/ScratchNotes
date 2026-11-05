@@ -37,6 +37,7 @@ add_executable(snotes_tests
     rhythm/BeatTrackerTest.cpp
     rhythm/CleanUpTest.cpp
     rhythm/MeterTest.cpp
+    rhythm/NoteEditTest.cpp
     rhythm/OnsetStrengthTest.cpp
     rhythm/QuantizerTest.cpp
     rhythm/RhythmAnalysisTest.cpp
@@ -61,6 +62,7 @@ add_executable(snotes_tests
     ui/LatencyCalibrationTest.cpp
     ui/LatencyCompensationTest.cpp
     ui/LevelMeterTest.cpp
+    ui/NoteCorrectionTest.cpp
     ui/RecordingControllerTest.cpp
     ui/RhythmUpdateTest.cpp
     ui/ScoreDisplayTest.cpp
