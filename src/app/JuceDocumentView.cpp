@@ -4,6 +4,7 @@
 #include "io/Utf8Path.h"
 
 #include <utility>
+#include <vector>
 
 namespace snotes::app
 {
@@ -96,6 +97,22 @@ void JuceDocumentView::chooseExportFile(const std::filesystem::path& suggestedFi
                   juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles |
                       juce::FileBrowserComponent::warnAboutOverwriting,
                   std::move(onChosen));
+}
+
+void JuceDocumentView::chooseAudioFiles(const std::filesystem::path& startFolder,
+                                        ui::PathsChosenCallback onChosen)
+{
+    chooser_ = std::make_unique<juce::FileChooser>(
+        i18n::trJuce("Import audio"), toJuceFile(startFolder), "*.wav;*.aif;*.aiff;*.flac;*.ogg");
+    chooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles |
+                              juce::FileBrowserComponent::canSelectMultipleItems,
+                          [onChosen = std::move(onChosen)](const juce::FileChooser& chooser)
+                          {
+                              std::vector<std::filesystem::path> files;
+                              for (const auto& file : chooser.getResults())
+                                  files.push_back(io::pathFromUtf8(file.getFullPathName().toStdString()));
+                              onChosen(std::move(files));
+                          });
 }
 
 void JuceDocumentView::showMessage(const std::string& title, const std::string& message)

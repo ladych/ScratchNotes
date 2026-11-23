@@ -152,6 +152,21 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .showMessage = showWarning,
            .takesRecorded = [this](const std::vector<std::string>& takeIds)
            { transcription_.transcribeNew(takeIds); }}),
+      takeImport_(
+          project_,
+          undoManager_,
+          fileSystem_,
+          audioReader_,
+          idGenerator_,
+          documentView_,
+          {.projectFolder = [this](const ui::TakeImportEnvironment::FolderCallback& onFolder)
+           { document_.withFolder(onFolder); },
+           .isRecording = [this] { return recording_.state() != ui::RecordingController::State::idle; },
+           .numInputs = [this] { return static_cast<int>(inputNames().size()); },
+           .now = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%dT%H:%M:%S").toStdString(); },
+           .showMessage = showWarning,
+           .takesImported = [this](const std::vector<std::string>& takeIds)
+           { transcription_.transcribeNew(takeIds); }}),
       transportControl_(
           transport_,
           {.sampleRate = [this] { return deviceSampleRate(); },
@@ -172,6 +187,7 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .open = [this] { document_.open(); },
            .save = [this] { document_.save(); },
            .saveAs = [this] { document_.saveAs(); },
+           .importAudio = [this] { takeImport_.importAsNewVoice(); },
            .exportMidi = [this] { scoreExport_.exportAs(ui::ExportFormat::midi); },
            .exportMusicXml = [this] { scoreExport_.exportAs(ui::ExportFormat::musicXml); }},
           {.undo = [this] { document_.undo(); },
@@ -237,6 +253,7 @@ std::unique_ptr<juce::Component> AppComposition::createMainComponent()
         TrackViewContext{.project = project_,
                          .editor = trackEditor_,
                          .recording = recording_,
+                         .imports = takeImport_,
                          .transcription = transcription_,
                          .grid = gridCorrection_,
                          .notes = noteCorrection_,

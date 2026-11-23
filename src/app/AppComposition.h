@@ -29,6 +29,7 @@
 #include "ui/ScoreExport.h"
 #include "ui/ScoreSounds.h"
 #include "ui/TakeAudioCache.h"
+#include "ui/TakeImport.h"
 #include "ui/ThemeSetting.h"
 #include "ui/TrackList.h"
 #include "ui/TranscriptionController.h"
@@ -125,6 +126,9 @@ private:
     WriterThread writerThread_;
     ui::TrackEditor trackEditor_;
     ui::RecordingController recording_;
+    // Import (AP10): audio files as takes, transcribed like recordings.
+    io::AudioFileReader audioReader_;
+    ui::TakeImport takeImport_;
     ui::TransportControl transportControl_;
     ui::LatencyCalibration latencyCalibration_;
     io::SettingsStore deviceSettings_;

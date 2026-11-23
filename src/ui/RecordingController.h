@@ -108,8 +108,6 @@ private:
                                        TakeFiles& files);
     [[nodiscard]] std::vector<model::Voice> armedVoices() const;
     [[nodiscard]] bool hasTakes() const;
-    [[nodiscard]] std::string fileBaseName(const model::Voice& voice,
-                                           const std::filesystem::path& folder) const;
     void finish();
     void showError(const std::string& message) const;
 

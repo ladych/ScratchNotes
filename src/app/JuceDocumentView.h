@@ -32,6 +32,8 @@ public:
     void chooseExportFile(const std::filesystem::path& suggestedFile,
                           const std::string& pattern,
                           ui::PathChosenCallback onChosen) override;
+    void chooseAudioFiles(const std::filesystem::path& startFolder,
+                          ui::PathsChosenCallback onChosen) override;
     void showMessage(const std::string& title, const std::string& message) override;
 
 private:

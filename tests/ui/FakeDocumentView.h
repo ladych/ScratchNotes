@@ -51,6 +51,12 @@ public:
         onChosen(fileToExport);
     }
 
+    void chooseAudioFiles(const std::filesystem::path& startFolder, PathsChosenCallback onChosen) override
+    {
+        audioStartFolders.push_back(startFolder);
+        onChosen(audioFilesToImport);
+    }
+
     void showMessage(const std::string& title, const std::string& message) override
     {
         messages.push_back({title, message});
@@ -61,6 +67,7 @@ public:
     std::optional<std::filesystem::path> fileToOpen;
     std::optional<std::filesystem::path> folderToSave;
     std::optional<std::filesystem::path> fileToExport;
+    std::vector<std::filesystem::path> audioFilesToImport;
 
     // Recorded calls
     std::string windowTitle;
@@ -69,6 +76,7 @@ public:
     std::vector<std::filesystem::path> suggestedFolders;
     std::vector<std::filesystem::path> suggestedExports;
     std::vector<std::string> exportPatterns;
+    std::vector<std::filesystem::path> audioStartFolders;
     std::vector<Message> messages;
 };
 

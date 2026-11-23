@@ -5,6 +5,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace snotes::ui
 {
@@ -17,6 +18,7 @@ enum class SaveChangesChoice : std::uint8_t
 };
 
 using PathChosenCallback = std::function<void(std::optional<std::filesystem::path>)>;
+using PathsChosenCallback = std::function<void(std::vector<std::filesystem::path>)>;
 
 /// Window title and dialogs the DocumentController needs. Dialogs are asynchronous: each reports
 /// the user's answer through its callback, so the JUCE implementation needs no modal loops.
@@ -39,6 +41,9 @@ public:
     virtual void chooseExportFile(const std::filesystem::path& suggestedFile,
                                   const std::string& pattern,
                                   PathChosenCallback onChosen) = 0;
+    /// Asks for one or more audio files to import, starting in `startFolder` (empty: the system's default).
+    /// Reports no files if the user cancels.
+    virtual void chooseAudioFiles(const std::filesystem::path& startFolder, PathsChosenCallback onChosen) = 0;
     virtual void showMessage(const std::string& title, const std::string& message) = 0;
 
 protected:

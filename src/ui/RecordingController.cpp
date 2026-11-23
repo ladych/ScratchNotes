@@ -5,25 +5,12 @@
 #include "i18n/Translate.h"
 #include "io/Utf8Path.h"
 #include "model/ModelIds.h"
+#include "ui/TakeFileNames.h"
 
 #include <utility>
 
 namespace snotes::ui
 {
-namespace
-{
-
-/// "audio/<base> DI.wav" or "audio/<base> processed.wav", relative to the project folder.
-std::string audioFile(const std::string& base, bool processed)
-{
-    std::string suffix = " DI";
-    if (processed)
-        suffix = i18n::tr(" processed");
-    return "audio/" + base + suffix + ".wav";
-}
-
-} // namespace
-
 RecordingController::RecordingController(juce::ValueTree project,
                                          juce::UndoManager& undoManager,
                                          engine::IRecorderControl& recorder,
@@ -158,7 +145,7 @@ bool RecordingController::createTakeFiles(const model::Voice& voice,
                                           const std::string& recordedAt,
                                           TakeFiles& files)
 {
-    const auto base = fileBaseName(voice, folder);
+    const auto base = nextTakeBaseName(voice.name(), voice.numTakes(), folder, fileSystem_);
     model::TakeData take;
     take.id = idGenerator_.next();
     take.recordedAt = recordedAt;
@@ -167,7 +154,7 @@ bool RecordingController::createTakeFiles(const model::Voice& voice,
         const int input = processed ? voice.inputWet() : voice.inputDi();
         if (input == model::kNoInput)
             continue;
-        const auto relative = audioFile(base, processed);
+        const auto relative = takeAudioFile(base, processed);
         auto file = fileSystem_.createBinaryFile(folder / io::pathFromUtf8(relative));
         if (!file)
         {
@@ -206,21 +193,6 @@ bool RecordingController::hasTakes() const
         if (project.voice(index).numTakes() > 0)
             return true;
     return false;
-}
-
-std::string RecordingController::fileBaseName(const model::Voice& voice,
-                                              const std::filesystem::path& folder) const
-{
-    const auto name =
-        juce::File::createLegalFileName(juce::String::fromUTF8(voice.name().c_str())).toStdString();
-    for (int number = voice.numTakes() + 1;; ++number)
-    {
-        auto base = i18n::tr("%1 take %2", name, std::to_string(number));
-        const auto di = folder / io::pathFromUtf8(audioFile(base, false));
-        const auto processed = folder / io::pathFromUtf8(audioFile(base, true));
-        if (!fileSystem_.exists(di) && !fileSystem_.exists(processed))
-            return base;
-    }
 }
 
 void RecordingController::finish()
