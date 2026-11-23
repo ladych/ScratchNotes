@@ -24,6 +24,8 @@ struct DocumentEnvironment
     std::function<std::string()> timestamp;
     /// Called with the folder of every project saved or opened, so the next start reopens it.
     std::function<void(const std::filesystem::path&)> rememberFolder;
+    /// What the recovery file holds (F-AU-06): the project with the takes of a running recording.
+    std::function<juce::ValueTree()> recoveryState;
 };
 
 /// Presenter for the menus "Datei" and "Bearbeiten": new, open, save, save as, close with the
@@ -36,6 +38,10 @@ struct DocumentEnvironment
 /// It works on one project tree that lives as long as the application, so listeners such as the
 /// SnapshotPublisher stay attached: new and opened projects are copied into it, and their undo
 /// history starts empty.
+///
+/// Against crashes (F-AU-06, Q-09) a project with a folder and unsaved changes keeps a recovery file next
+/// to projekt.snotes, brought up to date by poll(). Saving and discarding the changes delete it; finding it
+/// on opening means the program did not end properly, and the user is asked whether to restore it.
 class DocumentController
 {
 public:
@@ -55,6 +61,10 @@ public:
     /// Reports the project folder; a new project is saved first, so its folder exists (recording writes into
     /// it). Reports std::nullopt if that save failed.
     void withFolder(const std::function<void(std::optional<std::filesystem::path>)>& action);
+    /// Writes the recovery file now, e.g. when a recording started (F-AU-06); nothing without a folder.
+    void writeRecovery();
+    /// GUI timer, about once a second: writes the recovery file if the project changed since.
+    void poll();
     /// Calls onClose unless the user cancels the question for unsaved changes.
     void requestClose(std::function<void()> onClose);
 
@@ -68,11 +78,15 @@ public:
     [[nodiscard]] std::string windowTitle() const;
 
 private:
+    void projectChanged();
     void ifChangesSaved(std::function<void()> action);
     void startNewProject();
     /// Returns false if the project could not be loaded; `quietIfUnreadable` skips the message then.
     bool openFolder(const std::filesystem::path& folder, bool quietIfUnreadable);
     bool saveTo(const std::filesystem::path& folder);
+    void offerRecovery(const std::filesystem::path& folder);
+    void recover(const std::filesystem::path& folder);
+    void discardRecovery();
     void replaceProject(const juce::ValueTree& newProject, std::optional<std::filesystem::path> folder);
     void setCurrentFolder(const std::filesystem::path& folder);
     void setUnsavedChanges(bool unsavedChanges);
@@ -89,6 +103,8 @@ private:
     DocumentEnvironment environment_;
     std::optional<std::filesystem::path> currentFolder_;
     bool unsavedChanges_ = false;
+    /// The project changed since the recovery file was written.
+    bool recoveryStale_ = false;
     model::TreeChangeListener listener_;
 };
 

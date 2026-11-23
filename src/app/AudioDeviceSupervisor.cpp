@@ -54,6 +54,11 @@ void AudioDeviceSupervisor::open()
     startTimer(kWatchIntervalMs);
 }
 
+bool AudioDeviceSupervisor::isRunning() const
+{
+    return deviceManager_.getCurrentAudioDevice() != nullptr && !recovery_.stalled();
+}
+
 void AudioDeviceSupervisor::describe(ui::AudioDeviceInfo& info) const
 {
     info.stalled = recovery_.stalled();

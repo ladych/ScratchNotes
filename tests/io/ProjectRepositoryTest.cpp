@@ -237,6 +237,48 @@ TEST_F(ProjectRepositoryTest, FPJ02_SaveCopyFailsIfTheFolderCannotBeCreated)
     EXPECT_EQ(repository.saveCopy(tree, folder, copyFolder), ProjectFileError::writeFailed);
 }
 
+TEST_F(ProjectRepositoryTest, Q09_SaveRecoveryWritesTheRecoveryFileOverATemporaryFile)
+{
+    const auto file = folder / "projekt.snotes.recovery";
+    auto temp = file;
+    temp += ".tmp";
+    {
+        InSequence order;
+        EXPECT_CALL(fileSystem, writeText(temp, ProjectSerializer::toXml(tree))).WillOnce(Return(true));
+        EXPECT_CALL(fileSystem, rename(temp, file)).WillOnce(Return(true));
+    }
+
+    EXPECT_EQ(repository.saveRecovery(tree, folder), ProjectFileError::none);
+}
+
+TEST_F(ProjectRepositoryTest, Q09_HasRecoveryTellsWhetherTheRecoveryFileExists)
+{
+    EXPECT_CALL(fileSystem, exists(folder / "projekt.snotes.recovery")).WillOnce(Return(false));
+
+    EXPECT_FALSE(repository.hasRecovery(folder));
+}
+
+TEST_F(ProjectRepositoryTest, Q09_LoadRecoveryReadsTheRecoveryFileLikeAProject)
+{
+    EXPECT_CALL(fileSystem, readText(folder / "projekt.snotes.recovery"))
+        .WillOnce(Return(ProjectSerializer::toXml(tree)));
+    EXPECT_CALL(fileSystem, exists(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(fileSystem, exists(folder / "audio" / "t2-di.wav")).WillOnce(Return(false));
+
+    const auto result = repository.loadRecovery(folder);
+
+    ASSERT_EQ(result.error, ProjectFileError::none);
+    ASSERT_EQ(result.missingAudio.size(), 1U);
+    EXPECT_EQ(result.missingAudio[0].file, "audio/t2-di.wav");
+}
+
+TEST_F(ProjectRepositoryTest, Q09_RemoveRecoveryDeletesTheRecoveryFile)
+{
+    EXPECT_CALL(fileSystem, remove(folder / "projekt.snotes.recovery")).WillOnce(Return(true));
+
+    repository.removeRecovery(folder);
+}
+
 TEST_F(ProjectRepositoryTest, FPJ01_FreeFolderKeepsAnUnusedName)
 {
     EXPECT_CALL(fileSystem, exists(folder)).WillOnce(Return(false));

@@ -22,6 +22,7 @@ public:
                 copyFile,
                 (const std::filesystem::path& from, const std::filesystem::path& to),
                 (override));
+    MOCK_METHOD(bool, remove, (const std::filesystem::path& file), (override));
     MOCK_METHOD(std::unique_ptr<IBinaryFile>,
                 createBinaryFile,
                 (const std::filesystem::path& file),

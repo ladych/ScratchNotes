@@ -102,6 +102,37 @@ void RecordingController::poll()
 {
     if (state_ == State::stopping && recorder_.isReleased(*session_))
         finish();
+    if (state_ == State::recording && !takesStarted_ &&
+        session_->startSample() != engine::RecordingSession::kNotStarted)
+    {
+        takesStarted_ = true;
+        environment_.takesStarted();
+    }
+}
+
+void RecordingController::watchDevice(bool running)
+{
+    if (state_ != State::recording || (running && environment_.deviceStarts() == deviceStarts_))
+        return;
+    deviceFailed_ = true;
+    stop();
+}
+
+juce::ValueTree RecordingController::projectWithRunningTakes() const
+{
+    if (state_ == State::idle)
+        return project_;
+    auto copy = project_.createCopy();
+    const model::Project project{copy, nullptr};
+    for (const auto& pending : pending_)
+    {
+        auto data = pending.data;
+        data.startSample = std::max<std::int64_t>(session_->startSample(), 0);
+        data.latencyOffsetSamples = latency_;
+        if (auto voice = project.findVoice(pending.voiceId))
+            static_cast<void>(voice->addTake(data));
+    }
+    return copy;
 }
 
 double RecordingController::recordedSeconds() const
@@ -130,6 +161,9 @@ void RecordingController::begin(const std::filesystem::path& folder, double samp
         project_.setProperty(model::ids::sampleRate, sampleRate, nullptr);
     sampleRate_ = sampleRate;
     latency_ = environment_.latencySamples();
+    deviceStarts_ = environment_.deviceStarts();
+    deviceFailed_ = false;
+    takesStarted_ = false;
     session_ = std::make_unique<engine::RecordingSession>(files.inputs);
     writer_ = std::make_unique<io::TakeFileWriter>(*session_, std::move(files.writers));
     pending_ = std::move(files.pending);
@@ -216,6 +250,9 @@ void RecordingController::finish()
     pending_.clear();
     state_ = State::idle;
     environment_.takesRecorded(added);
+    if (deviceFailed_)
+        showError(i18n::tr("The audio device failed or was changed, so the recording stopped. The takes keep "
+                           "what was recorded up to then."));
     if (!written)
         showError(i18n::tr("Writing the recording failed. The takes may be incomplete; is the disk full?"));
     else if (dropped > 0)

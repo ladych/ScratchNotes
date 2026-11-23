@@ -29,6 +29,15 @@ public:
         onChoice(saveChangesAnswer);
     }
 
+    void askToRecover(const std::string& projectName, std::function<void(bool recover)> onChoice) override
+    {
+        askedToRecover.push_back(projectName);
+        if (deferRecoverAnswer)
+            pendingRecoverAnswer = std::move(onChoice);
+        else
+            onChoice(recoverAnswer);
+    }
+
     void chooseProjectFile(const std::filesystem::path& startFolder, PathChosenCallback onChosen) override
     {
         openStartFolders.push_back(startFolder);
@@ -64,6 +73,10 @@ public:
 
     // Preset answers
     SaveChangesChoice saveChangesAnswer = SaveChangesChoice::cancel;
+    bool recoverAnswer = false;
+    /// Keeps the callback of askToRecover in pendingRecoverAnswer instead of answering.
+    bool deferRecoverAnswer = false;
+    std::function<void(bool)> pendingRecoverAnswer;
     std::optional<std::filesystem::path> fileToOpen;
     std::optional<std::filesystem::path> folderToSave;
     std::optional<std::filesystem::path> fileToExport;
@@ -72,6 +85,7 @@ public:
     // Recorded calls
     std::string windowTitle;
     std::vector<std::string> askedToSave;
+    std::vector<std::string> askedToRecover;
     std::vector<std::filesystem::path> openStartFolders;
     std::vector<std::filesystem::path> suggestedFolders;
     std::vector<std::filesystem::path> suggestedExports;

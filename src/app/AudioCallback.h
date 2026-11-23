@@ -33,9 +33,16 @@ public:
         return blocks_.load(std::memory_order_relaxed);
     }
 
+    /// Starts of a device so far; a new start during a recording means the device was replaced (F-AO-04).
+    [[nodiscard]] std::uint64_t deviceStarts() const noexcept
+    {
+        return starts_.load(std::memory_order_relaxed);
+    }
+
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override
     {
         engine_.prepare(device->getCurrentSampleRate());
+        starts_.fetch_add(1, std::memory_order_relaxed);
     }
 
     void audioDeviceStopped() override {}
@@ -43,6 +50,7 @@ public:
 private:
     engine::AudioEngine engine_;
     std::atomic<std::uint64_t> blocks_{0};
+    std::atomic<std::uint64_t> starts_{0};
 };
 
 } // namespace snotes::app

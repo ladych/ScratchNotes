@@ -66,7 +66,17 @@ ProjectRepository::ProjectRepository(IFileSystem& fileSystem) : fileSystem_(file
 
 LoadResult ProjectRepository::load(const std::filesystem::path& folder)
 {
-    const auto text = fileSystem_.readText(folder / kProjectFileName);
+    return loadFile(folder, kProjectFileName);
+}
+
+LoadResult ProjectRepository::loadRecovery(const std::filesystem::path& folder)
+{
+    return loadFile(folder, kRecoveryFileName);
+}
+
+LoadResult ProjectRepository::loadFile(const std::filesystem::path& folder, const char* fileName)
+{
+    const auto text = fileSystem_.readText(folder / fileName);
     if (!text)
         return {{}, ProjectFileError::unreadable, {}};
 
@@ -93,7 +103,30 @@ LoadResult ProjectRepository::load(const std::filesystem::path& folder)
 
 ProjectFileError ProjectRepository::save(const juce::ValueTree& project, const std::filesystem::path& folder)
 {
-    const auto file = folder / kProjectFileName;
+    return saveFile(project, folder, kProjectFileName);
+}
+
+ProjectFileError ProjectRepository::saveRecovery(const juce::ValueTree& project,
+                                                 const std::filesystem::path& folder)
+{
+    return saveFile(project, folder, kRecoveryFileName);
+}
+
+bool ProjectRepository::hasRecovery(const std::filesystem::path& folder) const
+{
+    return fileSystem_.exists(folder / kRecoveryFileName);
+}
+
+void ProjectRepository::removeRecovery(const std::filesystem::path& folder)
+{
+    static_cast<void>(fileSystem_.remove(folder / kRecoveryFileName));
+}
+
+ProjectFileError ProjectRepository::saveFile(const juce::ValueTree& project,
+                                             const std::filesystem::path& folder,
+                                             const char* fileName)
+{
+    const auto file = folder / fileName;
     auto tempFile = file;
     tempFile += ".tmp";
     const auto audioFolder = folder / kAudioFolderName;

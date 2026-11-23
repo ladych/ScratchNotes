@@ -24,6 +24,8 @@ public:
     virtual bool rename(const std::filesystem::path& from, const std::filesystem::path& to) = 0;
     /// Replaces an existing target file.
     virtual bool copyFile(const std::filesystem::path& from, const std::filesystem::path& to) = 0;
+    /// Deletes the file; true if it is gone afterwards, also if it did not exist.
+    virtual bool remove(const std::filesystem::path& file) = 0;
     /// Creates or empties the file for writing; nullptr if that fails.
     [[nodiscard]] virtual std::unique_ptr<IBinaryFile>
     createBinaryFile(const std::filesystem::path& file) = 0;

@@ -38,6 +38,13 @@ public:
     [[nodiscard]] virtual ProjectFileError saveCopy(const juce::ValueTree& project,
                                                     const std::filesystem::path& from,
                                                     const std::filesystem::path& to) = 0;
+    /// The state after a crash (F-AU-06, Q-09): written next to projekt.snotes while there are unsaved
+    /// changes, read like load(), deleted once the project is saved or the changes are discarded.
+    [[nodiscard]] virtual ProjectFileError saveRecovery(const juce::ValueTree& project,
+                                                        const std::filesystem::path& folder) = 0;
+    [[nodiscard]] virtual bool hasRecovery(const std::filesystem::path& folder) const = 0;
+    [[nodiscard]] virtual LoadResult loadRecovery(const std::filesystem::path& folder) = 0;
+    virtual void removeRecovery(const std::filesystem::path& folder) = 0;
     /// `wanted` if nothing exists there yet, otherwise "wanted (2)", "wanted (3)" ...
     [[nodiscard]] virtual std::filesystem::path freeFolder(const std::filesystem::path& wanted) const = 0;
 

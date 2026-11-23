@@ -65,6 +65,22 @@ void JuceDocumentView::askToSaveChanges(const std::string& projectName,
         options, [onChoice = std::move(onChoice)](int button) { onChoice(choiceForButton(button)); });
 }
 
+void JuceDocumentView::askToRecover(const std::string& projectName,
+                                    std::function<void(bool recover)> onChoice)
+{
+    const auto options = juce::MessageBoxOptions::makeOptionsYesNo(
+        juce::MessageBoxIconType::WarningIcon,
+        i18n::trJuce("Restore after crash"),
+        i18n::trJuce("Scratch Notes did not end properly while \"%1\" had unsaved changes or was recording. "
+                     "Restore the project as it was then, with the takes recorded up to then?",
+                     projectName),
+        i18n::trJuce("Restore"),
+        i18n::trJuce("Discard"));
+    // makeOptionsYesNo: the first button is 1, the second 0.
+    juce::AlertWindow::showAsync(options,
+                                 [onChoice = std::move(onChoice)](int button) { onChoice(button == 1); });
+}
+
 void JuceDocumentView::chooseProjectFile(const std::filesystem::path& startFolder,
                                          ui::PathChosenCallback onChosen)
 {

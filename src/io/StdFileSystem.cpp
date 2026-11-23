@@ -91,6 +91,13 @@ bool StdFileSystem::copyFile(const std::filesystem::path& from, const std::files
     return !error;
 }
 
+bool StdFileSystem::remove(const std::filesystem::path& file)
+{
+    std::error_code error;
+    std::filesystem::remove(file, error);
+    return !error;
+}
+
 std::unique_ptr<IBinaryFile> StdFileSystem::createBinaryFile(const std::filesystem::path& file)
 {
     std::fstream stream{file, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};

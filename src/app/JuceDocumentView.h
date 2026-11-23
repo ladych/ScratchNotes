@@ -25,6 +25,7 @@ public:
     void setWindowTitle(const std::string& title) override;
     void askToSaveChanges(const std::string& projectName,
                           std::function<void(ui::SaveChangesChoice)> onChoice) override;
+    void askToRecover(const std::string& projectName, std::function<void(bool recover)> onChoice) override;
     void chooseProjectFile(const std::filesystem::path& startFolder,
                            ui::PathChosenCallback onChosen) override;
     void chooseProjectFolder(const std::filesystem::path& suggestedFolder,

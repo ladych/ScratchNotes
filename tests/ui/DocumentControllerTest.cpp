@@ -61,6 +61,7 @@ protected:
     fs::path projectsFolder = fs::path{"Dokumente"} / "Scratch Notes";
     fs::path rehearsal = fs::path{"Band"} / "Probe";
     std::vector<fs::path> remembered;
+    juce::ValueTree recoveryState{"RECOVERY"};
 
     juce::UndoManager undoManager;
     juce::ValueTree tree = model::ProjectFactory::createDefault("leer");
@@ -74,7 +75,8 @@ protected:
         view,
         {.projectsFolder = projectsFolder,
          .timestamp = [] { return std::string{"2026-10-17 09-40"}; },
-         .rememberFolder = [this](const fs::path& folder) { remembered.push_back(folder); }}};
+         .rememberFolder = [this](const fs::path& folder) { remembered.push_back(folder); },
+         .recoveryState = [this] { return recoveryState; }}};
 };
 
 // ----- Start, window title and unsaved changes ----------------------------------------------------
@@ -440,6 +442,180 @@ TEST_F(DocumentControllerTest, FPJ04_UndoAndRedo)
     controller.redo();
     EXPECT_EQ(project.numVoices(), 1);
     EXPECT_FALSE(controller.canRedo());
+}
+
+// ----- Recovery after a crash (F-AU-06, Q-09) -----------------------------------------------------
+
+TEST_F(DocumentControllerTest, FAU06_PollWritesTheRecoveryFileAfterAChange)
+{
+    saveAs(rehearsal);
+    makeChange();
+    EXPECT_CALL(repository, saveRecovery(recoveryState, rehearsal)).WillOnce(Return(ProjectFileError::none));
+
+    controller.poll();
+    controller.poll();
+}
+
+TEST_F(DocumentControllerTest, FAU06_PollWritesNothingWithoutChanges)
+{
+    saveAs(rehearsal);
+    EXPECT_CALL(repository, saveRecovery(_, _)).Times(0);
+
+    controller.poll();
+}
+
+TEST_F(DocumentControllerTest, FAU06_AProjectWithoutFolderHasNoRecoveryFile)
+{
+    makeChange();
+    EXPECT_CALL(repository, saveRecovery(_, _)).Times(0);
+
+    controller.poll();
+    controller.writeRecovery();
+}
+
+TEST_F(DocumentControllerTest, FAU06_WriteRecoveryWritesAtOnce)
+{
+    saveAs(rehearsal);
+    EXPECT_CALL(repository, saveRecovery(recoveryState, rehearsal)).WillOnce(Return(ProjectFileError::none));
+
+    controller.writeRecovery();
+}
+
+TEST_F(DocumentControllerTest, FAU06_SavingDeletesTheRecoveryFile)
+{
+    saveAs(rehearsal);
+    makeChange();
+    EXPECT_CALL(repository, removeRecovery(rehearsal));
+    EXPECT_CALL(repository, saveRecovery(_, _)).Times(0);
+
+    controller.save();
+    controller.poll();
+}
+
+TEST_F(DocumentControllerTest, FAU06_SaveAsDeletesTheRecoveryFilesOfBothFolders)
+{
+    saveAs(rehearsal);
+    const auto copy = fs::path{"Band"} / "Kopie";
+    EXPECT_CALL(repository, removeRecovery(rehearsal));
+    EXPECT_CALL(repository, removeRecovery(copy));
+
+    saveAs(copy);
+}
+
+TEST_F(DocumentControllerTest, FAU06_DiscardingTheChangesDeletesTheRecoveryFile)
+{
+    saveAs(rehearsal);
+    makeChange();
+    view.saveChangesAnswer = SaveChangesChoice::discard;
+    EXPECT_CALL(repository, removeRecovery(rehearsal));
+
+    controller.newProject();
+}
+
+TEST_F(DocumentControllerTest, FAU06_DiscardingTheChangesOfAProjectWithoutFolderDeletesNothing)
+{
+    makeChange();
+    view.saveChangesAnswer = SaveChangesChoice::discard;
+    EXPECT_CALL(repository, removeRecovery(_)).Times(0);
+
+    controller.newProject();
+}
+
+class DocumentControllerRecoveryTest : public DocumentControllerTest
+{
+protected:
+    void SetUp() override
+    {
+        DocumentControllerTest::SetUp();
+        view.fileToOpen = rehearsal / "projekt.snotes";
+        ON_CALL(repository, load(_)).WillByDefault(Return(loadableProject("Probe")));
+        ON_CALL(repository, hasRecovery(rehearsal)).WillByDefault(Return(true));
+        auto recovered = model::ProjectFactory::createDefault("Probe");
+        Project{recovered, nullptr}.addVoice({.id = "v", .name = "Bass", .profileId = "bass4-e"});
+        ON_CALL(repository, loadRecovery(rehearsal))
+            .WillByDefault(Return(LoadResult{recovered, ProjectFileError::none, {}}));
+    }
+};
+
+TEST_F(DocumentControllerRecoveryTest, FAU06_OpeningAProjectWithARecoveryFileAsks)
+{
+    controller.open();
+
+    EXPECT_THAT(view.askedToRecover, ElementsAre("Probe"));
+}
+
+TEST_F(DocumentControllerRecoveryTest, FAU06_OpeningWithoutRecoveryFileAsksNothing)
+{
+    ON_CALL(repository, hasRecovery(_)).WillByDefault(Return(false));
+
+    controller.open();
+
+    EXPECT_TRUE(view.askedToRecover.empty());
+}
+
+TEST_F(DocumentControllerRecoveryTest, FAU06_RestoringLoadsTheRecoveryFileAsUnsavedChanges)
+{
+    view.recoverAnswer = true;
+    EXPECT_CALL(repository, removeRecovery(_)).Times(0);
+
+    controller.open();
+
+    EXPECT_EQ(project.numVoices(), 1);
+    EXPECT_EQ(controller.currentFolder(), rehearsal);
+    EXPECT_TRUE(controller.hasUnsavedChanges());
+    EXPECT_FALSE(controller.canUndo());
+}
+
+TEST_F(DocumentControllerRecoveryTest, FAU06_DecliningDeletesTheRecoveryFile)
+{
+    EXPECT_CALL(repository, removeRecovery(rehearsal));
+
+    controller.open();
+
+    EXPECT_EQ(project.numVoices(), 0);
+    EXPECT_FALSE(controller.hasUnsavedChanges());
+}
+
+TEST_F(DocumentControllerRecoveryTest, FAU06_AnUnreadableRecoveryFileIsReportedAndDeleted)
+{
+    view.recoverAnswer = true;
+    ON_CALL(repository, loadRecovery(_))
+        .WillByDefault(Return(LoadResult{{}, ProjectFileError::notAProject, {}}));
+    EXPECT_CALL(repository, removeRecovery(rehearsal));
+
+    controller.open();
+
+    EXPECT_EQ(project.numVoices(), 0);
+    ASSERT_EQ(view.messages.size(), 1U);
+    EXPECT_THAT(view.messages[0].text, HasSubstr("zuletzt gespeichert"));
+}
+
+TEST_F(DocumentControllerRecoveryTest, FAU06_MissingAudioOfTheRecoveryIsReported)
+{
+    view.recoverAnswer = true;
+    ON_CALL(repository, loadRecovery(_))
+        .WillByDefault(Return(LoadResult{model::ProjectFactory::createDefault("Probe"),
+                                         ProjectFileError::none,
+                                         {{.voiceName = "Bass", .file = "audio/Bass Take 1 DI.wav"}}}));
+
+    controller.open();
+
+    ASSERT_EQ(view.messages.size(), 1U);
+    EXPECT_THAT(view.messages[0].text, HasSubstr("audio/Bass Take 1 DI.wav"));
+}
+
+TEST_F(DocumentControllerRecoveryTest, FAU06_ALateAnswerForAnotherProjectIsIgnored)
+{
+    view.deferRecoverAnswer = true;
+    controller.open();
+    ON_CALL(repository, hasRecovery(_)).WillByDefault(Return(false));
+    view.fileToOpen = fs::path{"Band"} / "Andere" / "projekt.snotes";
+    controller.open();
+    EXPECT_CALL(repository, removeRecovery(_)).Times(0);
+    EXPECT_CALL(repository, loadRecovery(_)).Times(0);
+
+    view.pendingRecoverAnswer(true);
+    view.pendingRecoverAnswer(false);
 }
 
 } // namespace

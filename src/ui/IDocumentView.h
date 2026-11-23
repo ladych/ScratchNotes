@@ -30,6 +30,8 @@ public:
     virtual void setWindowTitle(const std::string& title) = 0;
     virtual void askToSaveChanges(const std::string& projectName,
                                   std::function<void(SaveChangesChoice)> onChoice) = 0;
+    /// After a crash (F-AU-06): asks whether to restore the unsaved state of the project.
+    virtual void askToRecover(const std::string& projectName, std::function<void(bool recover)> onChoice) = 0;
     /// Asks for a projekt.snotes file, starting in `startFolder`. Reports std::nullopt if the user cancels.
     virtual void chooseProjectFile(const std::filesystem::path& startFolder, PathChosenCallback onChosen) = 0;
     /// Asks for the folder to save the project in, suggesting `suggestedFolder`. Reports std::nullopt if

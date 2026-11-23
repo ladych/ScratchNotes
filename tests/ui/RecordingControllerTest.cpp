@@ -113,6 +113,8 @@ protected:
     FakeRecorder recorder;
     engine::Transport transport;
     std::int64_t latency = 0;
+    std::uint64_t deviceStarts = 1;
+    int takesStartedCount = 0;
     NiceMock<io::MockFileSystem> fileSystem;
     FakeWriterThread writerThread;
     model::FakeIdGenerator idGenerator;
@@ -131,7 +133,9 @@ protected:
          .now = [] { return std::string{"2026-10-17T09:40:00"}; },
          .showMessage = [this](const std::string& /*title*/, const std::string& message)
          { messages.push_back(message); },
-         .takesRecorded = [this](const std::vector<std::string>& takeIds) { recordedTakes = takeIds; }}};
+         .takesRecorded = [this](const std::vector<std::string>& takeIds) { recordedTakes = takeIds; },
+         .deviceStarts = [this] { return deviceStarts; },
+         .takesStarted = [this] { ++takesStartedCount; }}};
 };
 
 TEST_F(RecordingControllerTest, FAU05_ArmsVoices)
@@ -473,7 +477,8 @@ TEST_F(RecordingControllerTest, FAU02_ClosingWhileRecordingKeepsTheAudio)
              .deviceSampleRate = [] { return 48000.0; },
              .latencySamples = [] { return std::int64_t{0}; },
              .now = [] { return std::string{}; },
-             .showMessage = [](const std::string&, const std::string&) {}}};
+             .showMessage = [](const std::string&, const std::string&) {},
+             .deviceStarts = [] { return std::uint64_t{1}; }}};
         closing.setArmed("b", true);
         closing.start();
         audioBlock(10);
@@ -481,6 +486,104 @@ TEST_F(RecordingControllerTest, FAU02_ClosingWhileRecordingKeepsTheAudio)
 
     EXPECT_EQ(samplesIn("audio/Bass Take 1 DI.wav"), 10U);
     EXPECT_EQ(writerThread.detaches, 1);
+}
+
+TEST_F(RecordingControllerTest, FAO04_AFailedDeviceEndsThePassAndKeepsTheTakes)
+{
+    controller.setArmed("g", true);
+    controller.start();
+    audioBlock(100);
+
+    controller.watchDevice(false);
+    controller.poll();
+
+    EXPECT_EQ(controller.state(), State::idle);
+    EXPECT_FALSE(transport.isPlaying());
+    ASSERT_EQ(guitar.numTakes(), 1);
+    EXPECT_EQ(samplesIn("audio/Gitarre 1 Take 1 DI.wav"), 100U);
+    EXPECT_THAT(messages, ElementsAre(HasSubstr("ausgefallen")));
+}
+
+TEST_F(RecordingControllerTest, FAO04_ARestartedDeviceEndsThePass)
+{
+    controller.setArmed("g", true);
+    controller.start();
+
+    ++deviceStarts;
+    controller.watchDevice(true);
+
+    EXPECT_NE(controller.state(), State::recording);
+}
+
+TEST_F(RecordingControllerTest, FAO04_ARunningDeviceKeepsRecording)
+{
+    controller.setArmed("g", true);
+    controller.start();
+
+    controller.watchDevice(true);
+
+    EXPECT_EQ(controller.state(), State::recording);
+}
+
+TEST_F(RecordingControllerTest, FAO04_TheDeviceIsOnlyWatchedWhileRecording)
+{
+    controller.watchDevice(false);
+
+    EXPECT_EQ(controller.state(), State::idle);
+    EXPECT_THAT(messages, ::testing::IsEmpty());
+}
+
+TEST_F(RecordingControllerTest, FAU06_WithoutPassTheProjectHasNoRunningTakes)
+{
+    EXPECT_EQ(controller.projectWithRunningTakes(), tree);
+}
+
+TEST_F(RecordingControllerTest, FAU06_TheRunningTakesAreInACopyOfTheProject)
+{
+    controller.setArmed("g", true);
+    controller.setArmed("b", true);
+    transport.locate(4800);
+    latency = 240;
+    controller.start();
+    audioBlock(100);
+
+    const model::Project running{controller.projectWithRunningTakes(), nullptr};
+
+    EXPECT_EQ(guitar.numTakes(), 0);
+    ASSERT_EQ(running.findVoice("g")->numTakes(), 1);
+    const auto take = running.findVoice("g")->take(0);
+    EXPECT_EQ(take.diFile(), "audio/Gitarre 1 Take 1 DI.wav");
+    EXPECT_EQ(take.wetFile(), "audio/Gitarre 1 Take 1 bearbeitet.wav");
+    EXPECT_EQ(take.startSample(), 4800);
+    EXPECT_EQ(take.latencyOffsetSamples(), 240);
+    EXPECT_EQ(running.findVoice("b")->numTakes(), 1);
+}
+
+TEST_F(RecordingControllerTest, FAU06_ARunningTakeOfARemovedVoiceIsLeftOut)
+{
+    controller.setArmed("g", true);
+    controller.start();
+    project.removeVoice(0);
+
+    const model::Project running{controller.projectWithRunningTakes(), nullptr};
+
+    EXPECT_EQ(running.numVoices(), 1);
+    EXPECT_EQ(running.voice(0).numTakes(), 0);
+}
+
+TEST_F(RecordingControllerTest, FAU06_TakesStartedIsReportedOnceWithTheFirstBlock)
+{
+    controller.setArmed("g", true);
+    controller.start();
+    controller.poll();
+    EXPECT_EQ(takesStartedCount, 0);
+
+    audioBlock(100);
+    controller.poll();
+    audioBlock(100);
+    controller.poll();
+
+    EXPECT_EQ(takesStartedCount, 1);
 }
 
 } // namespace
