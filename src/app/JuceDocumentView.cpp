@@ -4,6 +4,7 @@
 #include "io/Utf8Path.h"
 
 #include <utility>
+#include <vector>
 
 namespace snotes::app
 {
@@ -64,6 +65,22 @@ void JuceDocumentView::askToSaveChanges(const std::string& projectName,
         options, [onChoice = std::move(onChoice)](int button) { onChoice(choiceForButton(button)); });
 }
 
+void JuceDocumentView::askToRecover(const std::string& projectName,
+                                    std::function<void(bool recover)> onChoice)
+{
+    const auto options = juce::MessageBoxOptions::makeOptionsYesNo(
+        juce::MessageBoxIconType::WarningIcon,
+        i18n::trJuce("Restore after crash"),
+        i18n::trJuce("Scratch Notes did not end properly while \"%1\" had unsaved changes or was recording. "
+                     "Restore the project as it was then, with the takes recorded up to then?",
+                     projectName),
+        i18n::trJuce("Restore"),
+        i18n::trJuce("Discard"));
+    // makeOptionsYesNo: the first button is 1, the second 0.
+    juce::AlertWindow::showAsync(options,
+                                 [onChoice = std::move(onChoice)](int button) { onChoice(button == 1); });
+}
+
 void JuceDocumentView::chooseProjectFile(const std::filesystem::path& startFolder,
                                          ui::PathChosenCallback onChosen)
 {
@@ -96,6 +113,22 @@ void JuceDocumentView::chooseExportFile(const std::filesystem::path& suggestedFi
                   juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles |
                       juce::FileBrowserComponent::warnAboutOverwriting,
                   std::move(onChosen));
+}
+
+void JuceDocumentView::chooseAudioFiles(const std::filesystem::path& startFolder,
+                                        ui::PathsChosenCallback onChosen)
+{
+    chooser_ = std::make_unique<juce::FileChooser>(
+        i18n::trJuce("Import audio"), toJuceFile(startFolder), "*.wav;*.aif;*.aiff;*.flac;*.ogg");
+    chooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles |
+                              juce::FileBrowserComponent::canSelectMultipleItems,
+                          [onChosen = std::move(onChosen)](const juce::FileChooser& chooser)
+                          {
+                              std::vector<std::filesystem::path> files;
+                              for (const auto& file : chooser.getResults())
+                                  files.push_back(io::pathFromUtf8(file.getFullPathName().toStdString()));
+                              onChosen(std::move(files));
+                          });
 }
 
 void JuceDocumentView::showMessage(const std::string& title, const std::string& message)

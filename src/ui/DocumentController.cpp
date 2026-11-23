@@ -23,7 +23,7 @@ DocumentController::DocumentController(juce::ValueTree project,
                                        IDocumentView& view,
                                        DocumentEnvironment environment)
     : project_(std::move(project)), undoManager_(undoManager), repository_(repository), view_(view),
-      environment_(std::move(environment)), listener_(project_, [this] { setUnsavedChanges(true); })
+      environment_(std::move(environment)), listener_(project_, [this] { projectChanged(); })
 {
     view_.setWindowTitle(windowTitle());
 }
@@ -86,6 +86,9 @@ void DocumentController::saveAs(std::function<void(bool saved)> onDone)
                 onDone(false);
                 return;
             }
+            // The changes are saved in the new folder now.
+            discardRecovery();
+            repository_.removeRecovery(*folder);
             setCurrentFolder(*folder);
             onDone(true);
         });
@@ -99,6 +102,27 @@ void DocumentController::withFolder(const std::function<void(std::optional<std::
         return;
     }
     save([this, action](bool saved) { action(saved ? currentFolder_ : std::nullopt); });
+}
+
+void DocumentController::projectChanged()
+{
+    setUnsavedChanges(true);
+    recoveryStale_ = true;
+}
+
+void DocumentController::writeRecovery()
+{
+    if (!currentFolder_)
+        return;
+    recoveryStale_ = false;
+    // A failure is not reported: it would come every second; saving reports it.
+    static_cast<void>(repository_.saveRecovery(environment_.recoveryState(), *currentFolder_));
+}
+
+void DocumentController::poll()
+{
+    if (recoveryStale_)
+        writeRecovery();
 }
 
 void DocumentController::requestClose(std::function<void()> onClose)
@@ -142,7 +166,10 @@ void DocumentController::ifChangesSaved(std::function<void()> action)
                            [this, action = std::move(action)](SaveChangesChoice choice)
                            {
                                if (choice == SaveChangesChoice::discard)
+                               {
+                                   discardRecovery();
                                    action();
+                               }
                                else if (choice == SaveChangesChoice::save)
                                    save(
                                        [action](bool saved)
@@ -173,7 +200,47 @@ bool DocumentController::openFolder(const std::filesystem::path& folder, bool qu
     environment_.rememberFolder(folder);
     if (!result.missingAudio.empty())
         view_.showMessage(i18n::tr("Missing audio files"), missingAudioMessage(result.missingAudio));
+    if (repository_.hasRecovery(folder))
+        offerRecovery(folder);
     return true;
+}
+
+void DocumentController::offerRecovery(const std::filesystem::path& folder)
+{
+    view_.askToRecover(projectName(),
+                       [this, folder](bool restore)
+                       {
+                           // Another project may have been opened meanwhile.
+                           if (currentFolder_ != folder)
+                               return;
+                           if (restore)
+                               recover(folder);
+                           else
+                               discardRecovery();
+                       });
+}
+
+void DocumentController::recover(const std::filesystem::path& folder)
+{
+    const auto result = repository_.loadRecovery(folder);
+    if (result.error != io::ProjectFileError::none)
+    {
+        view_.showMessage(i18n::tr("Restoring failed"),
+                          i18n::tr("The state after the crash could not be read. The project stays as it was "
+                                   "saved last."));
+        discardRecovery();
+        return;
+    }
+    replaceProject(result.project, folder);
+    setUnsavedChanges(true);
+    if (!result.missingAudio.empty())
+        view_.showMessage(i18n::tr("Missing audio files"), missingAudioMessage(result.missingAudio));
+}
+
+void DocumentController::discardRecovery()
+{
+    if (currentFolder_)
+        repository_.removeRecovery(*currentFolder_);
 }
 
 bool DocumentController::saveTo(const std::filesystem::path& folder)
@@ -184,6 +251,7 @@ bool DocumentController::saveTo(const std::filesystem::path& folder)
                           i18n::tr("The project could not be saved in \"%1\".", io::utf8FromPath(folder)));
         return false;
     }
+    repository_.removeRecovery(folder);
     setCurrentFolder(folder);
     return true;
 }
@@ -196,6 +264,7 @@ void DocumentController::replaceProject(const juce::ValueTree& newProject,
     project_.copyPropertiesAndChildrenFrom(newProject, nullptr);
     undoManager_.clearUndoHistory();
     setUnsavedChanges(false);
+    recoveryStale_ = false;
 }
 
 void DocumentController::setCurrentFolder(const std::filesystem::path& folder)
@@ -203,6 +272,7 @@ void DocumentController::setCurrentFolder(const std::filesystem::path& folder)
     currentFolder_ = folder;
     environment_.rememberFolder(folder);
     setUnsavedChanges(false);
+    recoveryStale_ = false;
 }
 
 void DocumentController::setUnsavedChanges(bool unsavedChanges)

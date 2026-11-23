@@ -44,6 +44,8 @@ public:
     /// Opens the saved device, or on the first start the best driver type (ASIO on Windows), and falls
     /// back to the next driver type if that fails. Starts watching the device.
     void open();
+    /// True while a device is open and gives audio (F-AO-04).
+    [[nodiscard]] bool isRunning() const;
     /// Adds the stall, the fallback and the dropout count to the status line.
     void describe(ui::AudioDeviceInfo& info) const;
 

@@ -29,6 +29,15 @@ public:
         onChoice(saveChangesAnswer);
     }
 
+    void askToRecover(const std::string& projectName, std::function<void(bool recover)> onChoice) override
+    {
+        askedToRecover.push_back(projectName);
+        if (deferRecoverAnswer)
+            pendingRecoverAnswer = std::move(onChoice);
+        else
+            onChoice(recoverAnswer);
+    }
+
     void chooseProjectFile(const std::filesystem::path& startFolder, PathChosenCallback onChosen) override
     {
         openStartFolders.push_back(startFolder);
@@ -51,6 +60,12 @@ public:
         onChosen(fileToExport);
     }
 
+    void chooseAudioFiles(const std::filesystem::path& startFolder, PathsChosenCallback onChosen) override
+    {
+        audioStartFolders.push_back(startFolder);
+        onChosen(audioFilesToImport);
+    }
+
     void showMessage(const std::string& title, const std::string& message) override
     {
         messages.push_back({title, message});
@@ -58,17 +73,24 @@ public:
 
     // Preset answers
     SaveChangesChoice saveChangesAnswer = SaveChangesChoice::cancel;
+    bool recoverAnswer = false;
+    /// Keeps the callback of askToRecover in pendingRecoverAnswer instead of answering.
+    bool deferRecoverAnswer = false;
+    std::function<void(bool)> pendingRecoverAnswer;
     std::optional<std::filesystem::path> fileToOpen;
     std::optional<std::filesystem::path> folderToSave;
     std::optional<std::filesystem::path> fileToExport;
+    std::vector<std::filesystem::path> audioFilesToImport;
 
     // Recorded calls
     std::string windowTitle;
     std::vector<std::string> askedToSave;
+    std::vector<std::string> askedToRecover;
     std::vector<std::filesystem::path> openStartFolders;
     std::vector<std::filesystem::path> suggestedFolders;
     std::vector<std::filesystem::path> suggestedExports;
     std::vector<std::string> exportPatterns;
+    std::vector<std::filesystem::path> audioStartFolders;
     std::vector<Message> messages;
 };
 

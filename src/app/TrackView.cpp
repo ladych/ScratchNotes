@@ -207,6 +207,7 @@ public:
                                                                        &remove_,
                                                                        &profile_,
                                                                        &take_,
+                                                                       &importTake_,
                                                                        &deleteTake_,
                                                                        &diCaption_,
                                                                        &wetCaption_,
@@ -310,6 +311,9 @@ private:
         deleteTake_.setButtonText(juce::String::fromUTF8("−"));
         deleteTake_.setTooltip(i18n::trJuce("Delete take"));
         deleteTake_.onClick = [this] { editor().deleteActiveTake(id_); };
+        importTake_.setButtonText("+");
+        importTake_.setTooltip(i18n::trJuce("Import audio files as a take (DI and processed signal)"));
+        importTake_.onClick = [this] { view_.context().imports.importInto(id_); };
         diCaption_.setText(i18n::trJuce("DI input"), juce::dontSendNotification);
         wetCaption_.setText(i18n::trJuce("Processed input"), juce::dontSendNotification);
         for (auto* caption : {&diCaption_, &wetCaption_})
@@ -362,6 +366,7 @@ private:
         profile_.setBounds(line.removeFromLeft(half));
         line.removeFromLeft(kPadding);
         deleteTake_.setBounds(line.removeFromRight(kSmallButton));
+        importTake_.setBounds(line.removeFromRight(kSmallButton));
         take_.setBounds(line.withTrimmedRight(2));
         header.removeFromTop(2);
         auto caption = header.removeFromTop(kCaptionHeight);
@@ -404,6 +409,7 @@ private:
     juce::TextButton remove_;
     juce::ComboBox profile_;
     juce::ComboBox take_;
+    juce::TextButton importTake_;
     juce::TextButton deleteTake_;
     theme::DimLabel diCaption_;
     theme::DimLabel wetCaption_;

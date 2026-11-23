@@ -17,6 +17,7 @@ add_executable(snotes_tests
     i18n/GermanTestLanguage.cpp
     i18n/LanguageCatalogTest.cpp
     i18n/TranslateTest.cpp
+    io/AudioFileReaderTest.cpp
     io/ProjectRepositoryTest.cpp
     io/ProjectSerializerTest.cpp
     io/SettingsStoreTest.cpp
@@ -69,6 +70,7 @@ add_executable(snotes_tests
     ui/ScoreExportTest.cpp
     ui/ScoreSoundsTest.cpp
     ui/TakeAudioCacheTest.cpp
+    ui/TakeImportTest.cpp
     ui/ThemeSettingTest.cpp
     ui/TrackListTest.cpp
     ui/TranscriptionControllerTest.cpp

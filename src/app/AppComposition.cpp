@@ -21,6 +21,7 @@ namespace
 {
 
 constexpr double kTestToneFrequencyHz = 440.0;
+constexpr int kWatchIntervalMs = 1000;
 constexpr float kTestToneGain = 0.2F;
 /// Opened on a device without saved settings; JUCE opens only the channels the device has. 32 covers the
 /// interfaces of the project (UR44C, Clarett 2Pre, SSL 12) with every input.
@@ -113,7 +114,8 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
           {.projectsFolder = projectsFolder(),
            .timestamp = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%d %H-%M").toStdString(); },
            .rememberFolder = [this](const std::filesystem::path& folder)
-           { lastProjectSettings_.save(io::utf8FromPath(folder)); }}),
+           { lastProjectSettings_.save(io::utf8FromPath(folder)); },
+           .recoveryState = [this] { return recording_.projectWithRunningTakes(); }}),
       transcriptionThread_(ModelData::basicpitch_onnx, ModelData::basicpitch_onnxSize),
       transcription_(
           project_,
@@ -151,6 +153,23 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .now = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%dT%H:%M:%S").toStdString(); },
            .showMessage = showWarning,
            .takesRecorded = [this](const std::vector<std::string>& takeIds)
+           { transcription_.transcribeNew(takeIds); },
+           .deviceStarts = [this] { return audioCallback_.deviceStarts(); },
+           .takesStarted = [this] { document_.writeRecovery(); }}),
+      takeImport_(
+          project_,
+          undoManager_,
+          fileSystem_,
+          audioReader_,
+          idGenerator_,
+          documentView_,
+          {.projectFolder = [this](const ui::TakeImportEnvironment::FolderCallback& onFolder)
+           { document_.withFolder(onFolder); },
+           .isRecording = [this] { return recording_.state() != ui::RecordingController::State::idle; },
+           .numInputs = [this] { return static_cast<int>(inputNames().size()); },
+           .now = [] { return juce::Time::getCurrentTime().formatted("%Y-%m-%dT%H:%M:%S").toStdString(); },
+           .showMessage = showWarning,
+           .takesImported = [this](const std::vector<std::string>& takeIds)
            { transcription_.transcribeNew(takeIds); }}),
       transportControl_(
           transport_,
@@ -172,6 +191,7 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
            .open = [this] { document_.open(); },
            .save = [this] { document_.save(); },
            .saveAs = [this] { document_.saveAs(); },
+           .importAudio = [this] { takeImport_.importAsNewVoice(); },
            .exportMidi = [this] { scoreExport_.exportAs(ui::ExportFormat::midi); },
            .exportMusicXml = [this] { scoreExport_.exportAs(ui::ExportFormat::musicXml); }},
           {.undo = [this] { document_.undo(); },
@@ -219,10 +239,12 @@ AppComposition::AppComposition(theme::LookAndFeel& lookAndFeel, std::function<vo
     deviceSupervisor_.open();
     deviceManager_.addAudioCallback(&audioCallback_);
     deviceManager_.addChangeListener(this);
+    startTimer(kWatchIntervalMs);
 }
 
 AppComposition::~AppComposition()
 {
+    stopTimer();
     juce::Desktop::getInstance().removeDarkModeSettingListener(this);
     deviceManager_.removeChangeListener(this);
     deviceManager_.removeAudioCallback(&audioCallback_);
@@ -237,6 +259,7 @@ std::unique_ptr<juce::Component> AppComposition::createMainComponent()
         TrackViewContext{.project = project_,
                          .editor = trackEditor_,
                          .recording = recording_,
+                         .imports = takeImport_,
                          .transcription = transcription_,
                          .grid = gridCorrection_,
                          .notes = noteCorrection_,
@@ -257,6 +280,12 @@ void AppComposition::changeListenerCallback(juce::ChangeBroadcaster* /*source*/)
 {
     if (const auto xml = deviceManager_.createStateXml())
         deviceSettings_.save(xml->toString().toStdString());
+}
+
+void AppComposition::timerCallback()
+{
+    recording_.watchDevice(deviceSupervisor_.isRunning());
+    document_.poll();
 }
 
 void AppComposition::chooseLanguage(const std::string& setting)

@@ -121,6 +121,23 @@ TEST_F(StdFileSystemTest, FPJ02_CopyingMissingFileFails)
     EXPECT_FALSE(fileSystem.copyFile(root / "missing.wav", root / "copy.wav"));
 }
 
+TEST_F(StdFileSystemTest, Q09_RemovesAFile)
+{
+    const auto file = root / "projekt.snotes.recovery";
+    ASSERT_TRUE(fileSystem.writeText(file, "x"));
+
+    EXPECT_TRUE(fileSystem.remove(file));
+    EXPECT_FALSE(fileSystem.exists(file));
+    EXPECT_TRUE(fileSystem.remove(file));
+}
+
+TEST_F(StdFileSystemTest, Q09_RemovingAFolderWithFilesFails)
+{
+    ASSERT_TRUE(fileSystem.writeText(root / "x.txt", "x"));
+
+    EXPECT_FALSE(fileSystem.remove(root));
+}
+
 TEST_F(StdFileSystemTest, FAU02_BinaryFileAppendsAndOverwrites)
 {
     const auto file = root / "take.wav";

@@ -5,25 +5,12 @@
 #include "i18n/Translate.h"
 #include "io/Utf8Path.h"
 #include "model/ModelIds.h"
+#include "ui/TakeFileNames.h"
 
 #include <utility>
 
 namespace snotes::ui
 {
-namespace
-{
-
-/// "audio/<base> DI.wav" or "audio/<base> processed.wav", relative to the project folder.
-std::string audioFile(const std::string& base, bool processed)
-{
-    std::string suffix = " DI";
-    if (processed)
-        suffix = i18n::tr(" processed");
-    return "audio/" + base + suffix + ".wav";
-}
-
-} // namespace
-
 RecordingController::RecordingController(juce::ValueTree project,
                                          juce::UndoManager& undoManager,
                                          engine::IRecorderControl& recorder,
@@ -115,6 +102,37 @@ void RecordingController::poll()
 {
     if (state_ == State::stopping && recorder_.isReleased(*session_))
         finish();
+    if (state_ == State::recording && !takesStarted_ &&
+        session_->startSample() != engine::RecordingSession::kNotStarted)
+    {
+        takesStarted_ = true;
+        environment_.takesStarted();
+    }
+}
+
+void RecordingController::watchDevice(bool running)
+{
+    if (state_ != State::recording || (running && environment_.deviceStarts() == deviceStarts_))
+        return;
+    deviceFailed_ = true;
+    stop();
+}
+
+juce::ValueTree RecordingController::projectWithRunningTakes() const
+{
+    if (state_ == State::idle)
+        return project_;
+    auto copy = project_.createCopy();
+    const model::Project project{copy, nullptr};
+    for (const auto& pending : pending_)
+    {
+        auto data = pending.data;
+        data.startSample = std::max<std::int64_t>(session_->startSample(), 0);
+        data.latencyOffsetSamples = latency_;
+        if (auto voice = project.findVoice(pending.voiceId))
+            static_cast<void>(voice->addTake(data));
+    }
+    return copy;
 }
 
 double RecordingController::recordedSeconds() const
@@ -143,6 +161,9 @@ void RecordingController::begin(const std::filesystem::path& folder, double samp
         project_.setProperty(model::ids::sampleRate, sampleRate, nullptr);
     sampleRate_ = sampleRate;
     latency_ = environment_.latencySamples();
+    deviceStarts_ = environment_.deviceStarts();
+    deviceFailed_ = false;
+    takesStarted_ = false;
     session_ = std::make_unique<engine::RecordingSession>(files.inputs);
     writer_ = std::make_unique<io::TakeFileWriter>(*session_, std::move(files.writers));
     pending_ = std::move(files.pending);
@@ -158,7 +179,7 @@ bool RecordingController::createTakeFiles(const model::Voice& voice,
                                           const std::string& recordedAt,
                                           TakeFiles& files)
 {
-    const auto base = fileBaseName(voice, folder);
+    const auto base = nextTakeBaseName(voice.name(), voice.numTakes(), folder, fileSystem_);
     model::TakeData take;
     take.id = idGenerator_.next();
     take.recordedAt = recordedAt;
@@ -167,7 +188,7 @@ bool RecordingController::createTakeFiles(const model::Voice& voice,
         const int input = processed ? voice.inputWet() : voice.inputDi();
         if (input == model::kNoInput)
             continue;
-        const auto relative = audioFile(base, processed);
+        const auto relative = takeAudioFile(base, processed);
         auto file = fileSystem_.createBinaryFile(folder / io::pathFromUtf8(relative));
         if (!file)
         {
@@ -208,21 +229,6 @@ bool RecordingController::hasTakes() const
     return false;
 }
 
-std::string RecordingController::fileBaseName(const model::Voice& voice,
-                                              const std::filesystem::path& folder) const
-{
-    const auto name =
-        juce::File::createLegalFileName(juce::String::fromUTF8(voice.name().c_str())).toStdString();
-    for (int number = voice.numTakes() + 1;; ++number)
-    {
-        auto base = i18n::tr("%1 take %2", name, std::to_string(number));
-        const auto di = folder / io::pathFromUtf8(audioFile(base, false));
-        const auto processed = folder / io::pathFromUtf8(audioFile(base, true));
-        if (!fileSystem_.exists(di) && !fileSystem_.exists(processed))
-            return base;
-    }
-}
-
 void RecordingController::finish()
 {
     writerThread_.detach();
@@ -244,6 +250,9 @@ void RecordingController::finish()
     pending_.clear();
     state_ = State::idle;
     environment_.takesRecorded(added);
+    if (deviceFailed_)
+        showError(i18n::tr("The audio device failed or was changed, so the recording stopped. The takes keep "
+                           "what was recorded up to then."));
     if (!written)
         showError(i18n::tr("Writing the recording failed. The takes may be incomplete; is the disk full?"));
     else if (dropped > 0)

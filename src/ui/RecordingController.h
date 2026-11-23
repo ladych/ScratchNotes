@@ -39,6 +39,11 @@ struct RecordingEnvironment
     std::function<void(const std::string& title, const std::string& message)> showMessage;
     /// Ids of the takes a pass added, for the transcription in the background (F-TX-01).
     std::function<void(const std::vector<std::string>& takeIds)> takesRecorded;
+    /// Starts of the audio device so far; a new start during a pass means the device was replaced.
+    std::function<std::uint64_t()> deviceStarts;
+    /// The takes of a running pass got their song position with the first recorded block: the recovery
+    /// file should get them now (F-AU-06).
+    std::function<void()> takesStarted;
 };
 
 /// Presenter for recording (F-AU-02, F-AU-04, F-AU-05, F-WI-04): arms voices, starts and stops a pass of all
@@ -46,6 +51,10 @@ struct RecordingEnvironment
 /// voice has an input for it, the processed signal go into their own WAV files in the project's audio/
 /// folder. Each take remembers the song position it started at and the round trip at that time, so it plays
 /// in time with the voices heard while it was recorded (F-WI-05).
+///
+/// If the audio device fails or is replaced during a pass, the pass ends as if stopped: the takes keep
+/// what was written up to then (F-AO-04). While a pass runs, projectWithRunningTakes() holds its takes for
+/// the recovery file, so they survive a crash (F-AU-06).
 class RecordingController
 {
 public:
@@ -79,8 +88,14 @@ public:
     void toggle();
     void start();
     void stop();
-    /// GUI timer: completes a stopped pass once the audio thread released it.
+    /// GUI timer: completes a stopped pass once the audio thread released it, and reports takesStarted.
     void poll();
+    /// GUI timer, about once a second: `running` is false while the device is closed or gives no audio.
+    /// Ends a running pass if the device failed or was started again since the pass began.
+    void watchDevice(bool running);
+    /// The project with the takes of the running pass, as they will be added when it ends; the project itself
+    /// while no pass runs.
+    [[nodiscard]] juce::ValueTree projectWithRunningTakes() const;
 
     [[nodiscard]] State state() const noexcept { return state_; }
     /// Length of the running pass.
@@ -108,8 +123,6 @@ private:
                                        TakeFiles& files);
     [[nodiscard]] std::vector<model::Voice> armedVoices() const;
     [[nodiscard]] bool hasTakes() const;
-    [[nodiscard]] std::string fileBaseName(const model::Voice& voice,
-                                           const std::filesystem::path& folder) const;
     void finish();
     void showError(const std::string& message) const;
 
@@ -125,6 +138,9 @@ private:
     State state_ = State::idle;
     double sampleRate_ = 0.0;
     std::int64_t latency_ = 0;
+    std::uint64_t deviceStarts_ = 0;
+    bool takesStarted_ = false;
+    bool deviceFailed_ = false;
     std::unique_ptr<engine::RecordingSession> session_;
     std::unique_ptr<io::TakeFileWriter> writer_;
     std::vector<PendingTake> pending_;

@@ -29,6 +29,7 @@
 #include "ui/ScoreExport.h"
 #include "ui/ScoreSounds.h"
 #include "ui/TakeAudioCache.h"
+#include "ui/TakeImport.h"
 #include "ui/ThemeSetting.h"
 #include "ui/TrackList.h"
 #include "ui/TranscriptionController.h"
@@ -48,7 +49,9 @@ namespace snotes::app
 
 /// Composition root (E-05): the only place where the object graph is created and wired. Members are
 /// declared in dependency order, so they are destroyed in reverse.
-class AppComposition final : private juce::ChangeListener, private juce::DarkModeSettingListener
+class AppComposition final : private juce::ChangeListener,
+                             private juce::DarkModeSettingListener,
+                             private juce::Timer
 {
 public:
     /// The colour scheme is shown through `lookAndFeel`, the program's default look and feel.
@@ -74,6 +77,8 @@ private:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     /// The operating system switched between light and dark mode.
     void darkModeSettingChanged() override { themeSetting_.systemChanged(); }
+    /// Once a second: the recovery file (F-AU-06) and a recording on a failed device (F-AO-04).
+    void timerCallback() override;
     /// Saves the language of "Hilfe > Sprache"; it shows after a restart.
     void chooseLanguage(const std::string& setting);
     void showAudioSettings();
@@ -125,6 +130,9 @@ private:
     WriterThread writerThread_;
     ui::TrackEditor trackEditor_;
     ui::RecordingController recording_;
+    // Import (AP10): audio files as takes, transcribed like recordings.
+    io::AudioFileReader audioReader_;
+    ui::TakeImport takeImport_;
     ui::TransportControl transportControl_;
     ui::LatencyCalibration latencyCalibration_;
     io::SettingsStore deviceSettings_;

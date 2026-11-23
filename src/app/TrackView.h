@@ -8,6 +8,7 @@
 #include "ui/NoteCorrection.h"
 #include "ui/RecordingController.h"
 #include "ui/RhythmUpdate.h"
+#include "ui/TakeImport.h"
 #include "ui/TrackList.h"
 #include "ui/TranscriptionController.h"
 #include "ui/TransportControl.h"
@@ -33,6 +34,8 @@ struct TrackViewContext
     juce::ValueTree project;
     ui::TrackEditor& editor;
     ui::RecordingController& recording;
+    /// Audio files imported as a take (F-PJ-05).
+    ui::TakeImport& imports;
     ui::TranscriptionController& transcription;
     ui::GridCorrection& grid;
     /// Corrections of single notes in the score view.

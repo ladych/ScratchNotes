@@ -21,6 +21,13 @@ public:
                  const std::filesystem::path& from,
                  const std::filesystem::path& to),
                 (override));
+    MOCK_METHOD(ProjectFileError,
+                saveRecovery,
+                (const juce::ValueTree& project, const std::filesystem::path& folder),
+                (override));
+    MOCK_METHOD(bool, hasRecovery, (const std::filesystem::path& folder), (const, override));
+    MOCK_METHOD(LoadResult, loadRecovery, (const std::filesystem::path& folder), (override));
+    MOCK_METHOD(void, removeRecovery, (const std::filesystem::path& folder), (override));
     MOCK_METHOD(std::filesystem::path, freeFolder, (const std::filesystem::path& wanted), (const, override));
 };
 

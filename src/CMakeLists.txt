@@ -15,6 +15,7 @@ add_library(snotes_core STATIC
     engine/Transport.cpp
     i18n/LanguageCatalog.cpp
     i18n/Translate.cpp
+    io/AudioFileReader.cpp
     io/ProjectRepository.cpp
     io/ProjectSerializer.cpp
     io/SettingsStore.cpp
@@ -73,6 +74,8 @@ add_library(snotes_core STATIC
     ui/ScoreExport.cpp
     ui/ScoreSounds.cpp
     ui/TakeAudioCache.cpp
+    ui/TakeFileNames.cpp
+    ui/TakeImport.cpp
     ui/ThemeSetting.cpp
     ui/TrackList.cpp
     ui/TranscriptionController.cpp

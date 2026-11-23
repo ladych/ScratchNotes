@@ -25,6 +25,7 @@ public:
     void setWindowTitle(const std::string& title) override;
     void askToSaveChanges(const std::string& projectName,
                           std::function<void(ui::SaveChangesChoice)> onChoice) override;
+    void askToRecover(const std::string& projectName, std::function<void(bool recover)> onChoice) override;
     void chooseProjectFile(const std::filesystem::path& startFolder,
                            ui::PathChosenCallback onChosen) override;
     void chooseProjectFolder(const std::filesystem::path& suggestedFolder,
@@ -32,6 +33,8 @@ public:
     void chooseExportFile(const std::filesystem::path& suggestedFile,
                           const std::string& pattern,
                           ui::PathChosenCallback onChosen) override;
+    void chooseAudioFiles(const std::filesystem::path& startFolder,
+                          ui::PathsChosenCallback onChosen) override;
     void showMessage(const std::string& title, const std::string& message) override;
 
 private:

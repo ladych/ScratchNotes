@@ -5,8 +5,10 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <array>
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace snotes::app
@@ -19,6 +21,7 @@ struct FileActions
     std::function<void()> open;
     std::function<void()> save;
     std::function<void()> saveAs;
+    std::function<void()> importAudio;
     std::function<void()> exportMidi;
     std::function<void()> exportMusicXml;
 };
@@ -108,7 +111,11 @@ public:
     bool perform(const InvocationInfo& info) override;
 
 private:
+    using ActionTable = std::array<std::pair<juce::CommandID, const std::function<void()>*>, 24>;
+
     [[nodiscard]] std::function<void()> actionFor(juce::CommandID commandID) const;
+    /// Every command with its action.
+    [[nodiscard]] ActionTable actions() const;
 
     std::function<void()> quit_;
     FileActions file_;
