@@ -34,7 +34,7 @@ cmake --build --preset debug
 ctest --preset debug
 ```
 
-**ONNX Runtime:** CMake lädt beim Konfigurieren das offizielle Paket der festgelegten Version (1.31.0) von GitHub und legt die Bibliothek neben das Programm und die Tests. Ohne Internet: Paket selbst entpacken und `-DSNOTES_ONNXRUNTIME_DIR=/pfad/zu/onnxruntime` angeben (das Verzeichnis mit `include/` und `lib/`).
+**ONNX Runtime:** CMake lädt beim Konfigurieren das offizielle Paket der festgelegten Version (1.31.0) von nuget.org (`Microsoft.ML.OnnxRuntime`) und legt die Bibliothek neben das Programm und die Tests. Ohne Internet: Paket selbst entpacken und `-DSNOTES_ONNXRUNTIME_DIR=/pfad/zu/onnxruntime` angeben (das Verzeichnis mit `include/` und `lib/`).
 
 **Windows mit ASIO:** Steinberg stellt das ASIO-SDK seit Oktober 2025 unter GPLv3 bereit, das ist mit unserer AGPLv3 vereinbar. CMake lädt die festgelegte Version (2.3.4, mit SHA-256 geprüft) beim Konfigurieren von Steinberg; sie liegt nicht im Repository. Ohne Internet: SDK selbst entpacken und `-DSNOTES_ASIO_SDK_DIR=C:/pfad/zum/asiosdk` angeben (das Verzeichnis mit `common/iasiodrv.h`); `-DSNOTES_ASIO=OFF` baut ohne ASIO. Die CI stellt das fertige Windows-Programm als Artefakt `ScratchNotes-Windows` bereit.
 

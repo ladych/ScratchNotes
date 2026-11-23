@@ -1,29 +1,42 @@
 # ONNX Runtime (MIT) runs the Basic Pitch model of the note detection (F-TX-02). CMake downloads the
-# official prebuilt package of the pinned release from GitHub instead of building it; SNOTES_ONNXRUNTIME_DIR
-# uses a local copy instead (e.g. for offline builds). The program loads it as a shared library, which is
+# official prebuilt package of the pinned release from nuget.org (Microsoft.ML.OnnxRuntime, one package
+# for Windows and Linux) instead of building it; SNOTES_ONNXRUNTIME_DIR uses a local copy instead (e.g. for
+# offline builds, a directory with include/ and lib/). The program loads it as a shared library, which is
 # copied next to every executable that links it (snotes_copy_onnxruntime).
 
 set(SNOTES_ONNXRUNTIME_VERSION 1.31.0)
 
 if(NOT SNOTES_ONNXRUNTIME_DIR)
     if(WIN32)
-        set(_ort_package onnxruntime-win-x64-${SNOTES_ONNXRUNTIME_VERSION}.zip)
-        set(_ort_hash 3958d8a44984160692c1b4ffd0de3cb48f8c39f9d34bb31e433db06e30b82195)
+        set(_ort_runtime win-x64)
+        set(_ort_libraries onnxruntime.dll onnxruntime.lib)
     elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
-        set(_ort_package onnxruntime-linux-x64-${SNOTES_ONNXRUNTIME_VERSION}.tgz)
-        set(_ort_hash cc5c72baf5ae5c8238a6841f0897227be2d02826b9cf98eaf02fdefaeeb03a57)
+        set(_ort_runtime linux-x64)
+        set(_ort_libraries libonnxruntime.so)
     else()
         message(FATAL_ERROR "No prebuilt ONNX Runtime for this platform; set SNOTES_ONNXRUNTIME_DIR")
     endif()
     include(FetchContent)
     FetchContent_Declare(onnxruntime
-        URL https://github.com/microsoft/onnxruntime/releases/download/v${SNOTES_ONNXRUNTIME_VERSION}/${_ort_package}
-        URL_HASH SHA256=${_ort_hash}
+        URL https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime/${SNOTES_ONNXRUNTIME_VERSION}/microsoft.ml.onnxruntime.${SNOTES_ONNXRUNTIME_VERSION}.nupkg
+        URL_HASH SHA256=7e35fdb4f5adb62f01e60798e2e5ed05108f5fbbe1cca03fbcc37903cf7c5e3b
+        # A .nupkg is a zip archive; CMake recognises it only by this extension.
+        DOWNLOAD_NAME onnxruntime-${SNOTES_ONNXRUNTIME_VERSION}.zip
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
         # The package has no CMake project to build; only its headers and libraries are used.
         SOURCE_SUBDIR no-cmake-project)
     FetchContent_MakeAvailable(onnxruntime)
-    set(SNOTES_ONNXRUNTIME_DIR "${onnxruntime_SOURCE_DIR}")
+    # Arranges the package like a local copy: include/ and lib/ with the versioned Linux library name.
+    set(SNOTES_ONNXRUNTIME_DIR "${CMAKE_BINARY_DIR}/onnxruntime-${SNOTES_ONNXRUNTIME_VERSION}")
+    file(COPY "${onnxruntime_SOURCE_DIR}/build/native/include/" DESTINATION "${SNOTES_ONNXRUNTIME_DIR}/include")
+    foreach(_ort_library IN LISTS _ort_libraries)
+        set(_ort_target "${_ort_library}")
+        if(_ort_library STREQUAL "libonnxruntime.so")
+            set(_ort_target "libonnxruntime.so.${SNOTES_ONNXRUNTIME_VERSION}")
+        endif()
+        configure_file("${onnxruntime_SOURCE_DIR}/runtimes/${_ort_runtime}/native/${_ort_library}"
+                       "${SNOTES_ONNXRUNTIME_DIR}/lib/${_ort_target}" COPYONLY)
+    endforeach()
 endif()
 
 if(NOT EXISTS "${SNOTES_ONNXRUNTIME_DIR}/include/onnxruntime_cxx_api.h")
