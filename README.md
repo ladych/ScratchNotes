@@ -75,6 +75,8 @@ scratchnotes-transcribe --out ergebnisse "Gitarre Take 1 DI.wav" "Bass Take 1 DI
 
 CLion liest `CMakePresets.json` direkt; die Presets `coverage`, `asan` und `tsan` bauen nur die Tests.
 
+`docs/Windows-Test.md` ist das Testprotokoll für ASIO/WASAPI, Geräteausfall, Absturz und Import auf den Windows-Rechnern im Proberaum (AP10).
+
 ## Qualitätsregeln
 
 Übernommen aus [Drum Programmer](https://github.com/ladych/DrumProgrammer) (E-01 bis E-09):
